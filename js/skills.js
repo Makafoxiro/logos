@@ -682,6 +682,7 @@ function renderSkills(){
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
         <button onclick="toggleSkillsCollapse(${t.id})" style="width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);color:#2a2a2a;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .12s" onmouseenter="this.style.background='rgba(45,212,191,0.1)';this.style.borderColor='rgba(45,212,191,0.3)';this.style.color='#2dd4bf'" onmouseleave="this.style.background='rgba(255,255,255,0.03)';this.style.borderColor='rgba(255,255,255,0.07)';this.style.color='#2a2a2a'">${collapsed?'▸':'▾'}</button>
+        <button onclick="openSkillDashboard(${t.id})" style="width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);color:#2a2a2a;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .12s" onmouseenter="this.style.background='rgba(45,212,191,0.1)';this.style.borderColor='rgba(45,212,191,0.3)';this.style.color='#2dd4bf'" onmouseleave="this.style.background='rgba(255,255,255,0.03)';this.style.borderColor='rgba(255,255,255,0.07)';this.style.color='#2a2a2a'" title="Дашборд">◧</button>
         <button onclick="openSkillsModal(${t.id})" style="width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);color:#2a2a2a;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .12s" onmouseenter="this.style.background='rgba(45,212,191,0.1)';this.style.borderColor='rgba(45,212,191,0.3)';this.style.color='#2dd4bf'" onmouseleave="this.style.background='rgba(255,255,255,0.03)';this.style.borderColor='rgba(255,255,255,0.07)';this.style.color='#2a2a2a'">⊞</button>
 
       </div>
@@ -765,3 +766,78 @@ function renderSkills(){
   list.innerHTML=html;
 }
 
+function openSkillDashboard(id){
+  const t=skillTemplates.find(x=>x.id===id);if(!t)return;
+  const existing=document.getElementById('skillDashOverlay');if(existing)existing.remove();
+  const cs=t.cycleSlot||'';const meta=cs?_slotMeta(cs):null;
+  const sType=t.skillType||'physical';
+  const accentColor=meta?meta.color:(sType==='mental'?'#A78BFA':'#2dd4bf');
+  const accentBg=meta?meta.bg:(sType==='mental'?'rgba(167,139,250,0.1)':'rgba(45,212,191,0.08)');
+  const typeLabel=sType==='mental'?'умственный':'физический';
+  const WDAY_NAMES=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  const exHtml=(t.exercises&&t.exercises.length)
+    ?t.exercises.map(e=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)">
+        <span style="color:${accentColor};font-size:12px;margin-top:1px;flex-shrink:0">▸</span>
+        <span style="font-size:13px;color:#c8c8c8;line-height:1.45">${e}</span>
+      </div>`).join('')
+    :`<div style="font-size:12px;color:#444;font-family:var(--mono);padding:6px 0">упражнения не добавлены</div>`;
+
+  const wdayHtml=WDAY_NAMES.map((d,i)=>`<div style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:7px;background:${(t.weekDays||[]).includes(i)?accentBg:'rgba(255,255,255,0.03)'};border:0.5px solid ${(t.weekDays||[]).includes(i)?accentColor+'55':'rgba(255,255,255,0.07)'};color:${(t.weekDays||[]).includes(i)?accentColor:'#444'}">${d}</div>`).join('');
+
+  const mediaHtml=(t.media&&t.media.length)
+    ?`<div style="margin-top:14px"><div style="font-family:var(--mono);font-size:9px;color:#444;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">медиа</div>
+       <div style="display:flex;flex-wrap:wrap;gap:6px">${t.media.map((m,mi)=>`<div onclick="skillsOpenMedia(${id},${mi})" style="width:60px;height:60px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);cursor:pointer;flex-shrink:0;background:#1a1a1a;position:relative">${m.type==='video'?`<video src="${m.dataUrl}" style="width:100%;height:100%;object-fit:cover"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(0,0,0,0.35)">▶</div>`:`<img src="${m.dataUrl}" style="width:100%;height:100%;object-fit:cover">`}</div>`).join('')}</div></div>`
+    :'';
+
+  const savedDesc=t.desc||'';
+
+  const overlay=document.createElement('div');
+  overlay.id='skillDashOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;display:flex;align-items:flex-end;justify-content:center;touch-action:none';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  overlay.innerHTML=`
+    <div style="background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:18px 18px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:20px 18px 32px;animation:su .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div style="width:40px;height:40px;border-radius:10px;background:${accentBg};border:0.5px solid ${accentColor}44;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700;color:${accentColor};flex-shrink:0">${cs||'T'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:16px;font-weight:500;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</div>
+          <div style="font-size:11px;color:#555;font-family:var(--mono);margin-top:2px">${typeLabel}${cs?' · слот '+cs:''}</div>
+        </div>
+        <button onclick="document.getElementById('skillDashOverlay').remove()" style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);color:#555;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+        <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 12px">
+          <div style="font-family:var(--mono);font-size:9px;color:#444;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">тип</div>
+          <div style="font-size:14px;font-weight:500;color:${accentColor}">${typeLabel}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 12px">
+          <div style="font-family:var(--mono);font-size:9px;color:#444;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">упражнений</div>
+          <div style="font-size:14px;font-weight:500;color:#e0e0e0">${(t.exercises||[]).length}</div>
+        </div>
+      </div>
+
+      <div style="font-family:var(--mono);font-size:9px;color:#444;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">дни недели</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:18px">${wdayHtml}</div>
+
+      <div style="font-family:var(--mono);font-size:9px;color:#444;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">упражнения / шаги</div>
+      <div style="margin-bottom:18px">${exHtml}</div>
+
+      <div style="font-family:var(--mono);font-size:9px;color:#444;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">заметки</div>
+      <textarea id="skillDashDesc_${id}" placeholder="Цель, план, прогресс, ссылки..." style="width:100%;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;font-size:13px;color:#c8c8c8;font-family:var(--sans);resize:none;min-height:90px;outline:none;box-sizing:border-box" oninput="saveSkillDashDesc(${id},this.value)">${savedDesc}</textarea>
+
+      ${mediaHtml}
+
+      <div style="margin-top:18px">
+        <button onclick="openSkillsModal(${id});document.getElementById('skillDashOverlay').remove()" style="width:100%;padding:10px;border-radius:10px;background:rgba(45,212,191,0.07);border:0.5px solid rgba(45,212,191,0.2);color:rgba(45,212,191,0.7);font-size:13px;cursor:pointer;transition:.12s" onmouseenter="this.style.background='rgba(45,212,191,0.14)'" onmouseleave="this.style.background='rgba(45,212,191,0.07)'">редактировать шаблон</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function saveSkillDashDesc(id,val){
+  const t=skillTemplates.find(x=>x.id===id);if(!t)return;
+  t.desc=val;
+  LS.s('sportTemplates',skillTemplates);
+}

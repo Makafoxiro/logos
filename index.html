@@ -841,6 +841,32 @@
         <div class="scard" id="notifSettingsCard"></div>
         <div class="scard" id="remindersCard"></div>
 
+        <div class="sh">ai-карта</div>
+        <div class="scard">
+          <div class="srow">
+            <div>
+              <div class="slabel">Снапшот для ИИ</div>
+              <div class="ssub">Скачай файл и вставь в чат — ИИ увидит твои тренировки, здоровье, цели, рутину, интересы и финансы</div>
+            </div>
+          </div>
+          <div class="srow" style="flex-direction:column;gap:8px;align-items:stretch">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button class="add-btn" onclick="exportAICard()" style="width:100%">↓ СКАЧАТЬ</button>
+              <button class="add-btn" onclick="copyAICard()" style="width:100%">⎘ КОПИРОВАТЬ</button>
+            </div>
+          </div>
+          <div style="margin-top:4px">
+            <div class="slabel" style="margin-bottom:6px;font-size:11px;color:var(--t2)">Дополнительный контекст (необязательно)</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input class="field-inp" id="aiProfileName" placeholder="Имя / ник" style="margin:0" oninput="saveAiProfile()" value="">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <input class="field-inp" id="aiProfileCity"    placeholder="Город" style="margin:0" oninput="saveAiProfile()" value="">
+                <input class="field-inp" id="aiProfileHorizon" placeholder="На сколько вперёд планируешь (напр: 1 год)" style="margin:0" oninput="saveAiProfile()" value="">
+              </div>
+              <textarea class="field-inp" id="aiProfileNotes" placeholder="Что ещё важно знать ИИ о тебе..." style="margin:0;height:60px;resize:none" oninput="saveAiProfile()"></textarea>
+            </div>
+          </div>
+        </div>
         <div class="sh" id="s-reset-lbl">сброс</div>
         <div class="scard">
           <div class="srow"><button class="add-btn" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.25)" onclick="clearToday()" id="s-reset-btn">СБРОСИТЬ ЗАДАЧИ СЕГОДНЯ</button></div>
@@ -1375,5 +1401,6 @@
     </div>
   </div>
 
+<script src="js/aicard.js"></script>
 </body>
 </html>

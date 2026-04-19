@@ -24,6 +24,22 @@ const GDrive = (() => {
   // Мьютекс: предотвращает параллельные сохранения (race condition)
   let _saveLock    = false;
 
+  // ── Кеш ID файлов ─────────────────────────────────────────────
+  // Хранит { "logos_backup.json": "fileId123", ... } в localStorage.
+  // Позволяет находить файлы по ID даже после переавторизации,
+  // обходя ограничение drive.file scope на поиск по имени.
+  function _getIdCache() {
+    try { return JSON.parse(localStorage.getItem('gdrive_file_ids') || '{}'); } catch { return {}; }
+  }
+  function _setIdCache(name, id) {
+    const cache = _getIdCache();
+    cache[name] = id;
+    localStorage.setItem('gdrive_file_ids', JSON.stringify(cache));
+  }
+  function _clearIdCache() {
+    localStorage.removeItem('gdrive_file_ids');
+  }
+
   // ── Токен ────────────────────────────────────────────────────
   function _isAuthed() {
     return !!(_token && Date.now() < _tokenExpiry - 120000);
@@ -104,6 +120,25 @@ const GDrive = (() => {
 
   // ── Drive API helpers ────────────────────────────────────────
   async function _findFile(name) {
+    // 1. Сначала пробуем по кешированному ID (работает после переавторизации)
+    const cache = _getIdCache();
+    if (cache[name]) {
+      try {
+        const r = await fetch(
+          'https://www.googleapis.com/drive/v3/files/' + cache[name] + '?fields=id,name,modifiedTime',
+          { headers: { Authorization: 'Bearer ' + _token } }
+        );
+        if (r.ok) {
+          const f = await r.json();
+          if (f && f.id) return f;
+        }
+        // Файл удалён или недоступен — чистим кеш
+        delete cache[name];
+        localStorage.setItem('gdrive_file_ids', JSON.stringify(cache));
+      } catch { /* идём к поиску */ }
+    }
+
+    // 2. Fallback: поиск по имени
     const q = encodeURIComponent("name='" + name + "' and trashed=false");
     const r = await fetch(
       'https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,modifiedTime)',
@@ -118,6 +153,8 @@ const GDrive = (() => {
         headers: { Authorization: 'Bearer ' + _token }
       });
     }
+    // Кешируем ID для следующих сессий
+    _setIdCache(name, d.files[0].id);
     return d.files[0];
   }
 
@@ -135,7 +172,10 @@ const GDrive = (() => {
       headers: { Authorization: 'Bearer ' + _token },
       body: form
     });
-    return r.json();
+    const result = await r.json();
+    // Кешируем ID файла для поиска в следующих сессиях
+    if (result && result.id) _setIdCache(name, result.id);
+    return result;
   }
 
   async function _readFile(fileId) {
@@ -310,6 +350,7 @@ const GDrive = (() => {
       _stopAutoSave();
       if (_token) google.accounts.oauth2.revoke(_token, () => {});
       _clearToken();
+      _clearIdCache();
       _tokenClient = null;
       _showReconnectBanner(false);
       if (typeof flash === 'function') flash('Выход из Google Drive');

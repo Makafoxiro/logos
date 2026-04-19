@@ -5,7 +5,7 @@ const DAYS7=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const EMOJIS=['💪','🧠','📖','🥗','😴','🚫','🎯','⚡','✍️','🧘','🚗','💊','🏃','🎨','🥊','📱','💰','🔑'];
 
 // ══ HELPERS ════════════════════════════════════════════
-const dk  = d=>`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const dk  = d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const mk  = d=>`M${d.getFullYear()}-${d.getMonth()}`;
 const nowDK = ()=>dk(new Date());
 const nowMK = ()=>mk(new Date());

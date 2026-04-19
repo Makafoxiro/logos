@@ -77,7 +77,7 @@ function buildAICard() {
   // (не зависим от in-memory переменных — карту можно скачать с любой страницы)
   const g = (key, def) => {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }
-    catch { return def; }
+    catch(e) { return def; }
   };
 
   const health       = g('health', {});

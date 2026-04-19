@@ -29,7 +29,7 @@ const GDrive = (() => {
   // Позволяет находить файлы по ID даже после переавторизации,
   // обходя ограничение drive.file scope на поиск по имени.
   function _getIdCache() {
-    try { return JSON.parse(localStorage.getItem('gdrive_file_ids') || '{}'); } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem('gdrive_file_ids') || '{}'); } catch(e) { return {}; }
   }
   function _setIdCache(name, id) {
     const cache = _getIdCache();
@@ -135,7 +135,7 @@ const GDrive = (() => {
         // Файл удалён или недоступен — чистим кеш
         delete cache[name];
         localStorage.setItem('gdrive_file_ids', JSON.stringify(cache));
-      } catch { /* идём к поиску */ }
+      } catch(e) { /* идём к поиску */ }
     }
 
     // 2. Fallback: поиск по имени

@@ -1,13 +1,13 @@
 // ═══ MODULE: finance.js ═══
 // ══ FINANCE ════════════════════════════════════════════
-let finPeriod='week'; // 'week' | 'month' | 'year'
+let finPeriod='month'; // 'month' | 'year'
 let _finEntryType='income';
 let _finTplPeriod='week';
 let _finTplType='income';
 
 function finSetPeriod(p){
   finPeriod=p;
-  ["week","month","year"].forEach(k=>{
+  ["month","year"].forEach(k=>{
     const id="fin"+k.charAt(0).toUpperCase()+k.slice(1)+"Btn";
     const btn=document.getElementById(id);
     if(!btn)return;
@@ -46,10 +46,7 @@ function renderFinChart(){
   const now=new Date();
   let days=[];
   let labels=[];
-  if(finPeriod==='week'){
-    for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);days.push(d);}
-    labels=days.map(d=>DAYS7[(d.getDay()+6)%7]);
-  } else if(finPeriod==='month'){
+  if(finPeriod==='month'){
     const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
     for(let i=1;i<=daysInMonth;i++){const d=new Date(now.getFullYear(),now.getMonth(),i);days.push(d);}
     labels=days.map(d=>d.getDate()%5===0?String(d.getDate()):'');
@@ -160,7 +157,7 @@ function renderFinChart(){
   labels.forEach((lbl,i)=>{
     if(!lbl)return;
     const x=pad.l+(n<=1?cW/2:cW/(n-1)*i);
-    ctx.font=`${finPeriod==='week'?9:finPeriod==='year'?8:8}px DM Mono,monospace`;
+    ctx.font=`${finPeriod==='year'?8:8}px DM Mono,monospace`;
     ctx.fillText(lbl,x,H-6);
   });
 
@@ -336,10 +333,12 @@ function renderFinPurchases(){
     const pMax=p.priceMax&&p.priceMax>0?p.priceMax:0;
     const priceLabel=pMax>0?(pMin.toLocaleString('ru')+' – '+pMax.toLocaleString('ru')+' ₽'):'~'+pMin.toLocaleString('ru')+' ₽';
     const days=p.date?Math.ceil((new Date(p.date)-now)/(1000*60*60*24)):null;
+    const _yrs=days!==null?(days/365.25):null;
+    const _yrsLabel=_yrs!==null?(_yrs>=1?(_yrs%1<0.05||_yrs%1>0.95?Math.round(_yrs)+' лет':_yrs.toFixed(1)+' г.'):(Math.round(days)+' дн.')):null;
     const daysLabel=days===null?''
       :days<0?'<span style="color:var(--red);font-family:var(--mono);font-size:10px">просрочено</span>'
       :days===0?'<span style="color:var(--a);font-family:var(--mono);font-size:10px">сегодня</span>'
-      :`<span style="font-family:var(--mono);font-size:10px;color:var(--amber)">${days} дн.</span>`;
+      :`<span style="font-family:var(--mono);font-size:10px;color:var(--amber)">${_yrsLabel}</span>`;
     return `<div class="card" style="padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;border-color:${p.paid?'rgba(45,212,191,0.15)':'rgba(255,255,255,0.08)'};opacity:${p.paid?'.55':'1'}">
       <div style="flex:1">
         <div style="font-size:14px;font-weight:500;margin-bottom:3px;${p.paid?'text-decoration:line-through;color:var(--t2)':''}">${p.name}</div>
@@ -382,10 +381,12 @@ function renderFinDebts(){
     const isOwe=d.direction==='owe';
     const color=isOwe?'#f87171':'#4ade80';
     const days=d.date?Math.ceil((new Date(d.date)-now)/(1000*60*60*24)):null;
+    const _dyrs=days!==null?(days/365.25):null;
+    const _dyrsLabel=_dyrs!==null?(_dyrs>=1?(_dyrs%1<0.05||_dyrs%1>0.95?Math.round(_dyrs)+' лет':_dyrs.toFixed(1)+' г.'):(Math.round(days)+' дн.')):null;
     const daysLbl=days===null?''
       :days<0?`<span style="font-family:var(--mono);font-size:9px;color:var(--red)">просрочено</span>`
       :days===0?`<span style="font-family:var(--mono);font-size:9px;color:var(--a)">сегодня</span>`
-      :`<span style="font-family:var(--mono);font-size:9px;color:var(--amber)">${days}д.</span>`;
+      :`<span style="font-family:var(--mono);font-size:9px;color:var(--amber)">${_dyrsLabel}</span>`;
     return `<div class="card" style="padding:12px 14px;margin-bottom:8px;border-color:${d.paid?'rgba(45,212,191,0.15)':'rgba(255,255,255,0.08)'};opacity:${d.paid?'.55':'1'}">
       <div style="display:flex;align-items:center;gap:8px">
         <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>

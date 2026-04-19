@@ -61,7 +61,7 @@ document.addEventListener('click',closeTaskPopup,{passive:true});
 function getNavBtn(page){return [...document.querySelectorAll('.nb')].find(b=>(b.getAttribute('onclick')||b.dataset.page||'').includes(page));}
 
 // ── Модальные окна ───────────────────────────────────────
-function openModal(id)  { const el = document.getElementById(id); if (el) el.classList.add('show'); }
+function openModal(id)  { const el = document.getElementById(id); if (!el) return; el.classList.add('show'); if(!el._touchBlocked){el._touchBlocked=true;el.addEventListener('touchstart',e=>{if(e.target===el||e.target.closest('.modal-box')||e.target.closest('.modal-body')||e.target.closest('.modal-sheet'))return;e.preventDefault();e.stopPropagation();},{passive:false});} }
 function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('show'); }
 
 // ── Универсальное удаление ───────────────────────────────

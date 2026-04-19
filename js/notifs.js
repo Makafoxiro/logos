@@ -307,3 +307,51 @@ function saveNotifTime(key,val){
 // Запустить при загрузке
 if(notifEnabled()) scheduleAllNotifs();
 
+// ══════════════════════════════════════════════════════════
+// НАПОМИНАЛКИ — внутриприложенческие, без прав браузера
+// ══════════════════════════════════════════════════════════
+
+function renderRemindersCard(){
+  const el=document.getElementById('remindersCard');
+  if(!el)return;
+  const cfg=LS.g('remindersCfg',{weight:{on:true}});
+  const tgl=(key,val)=>`<div class="tgl${val?' on':''}" onclick="toggleReminderItem('${key}')"></div>`;
+  el.innerHTML=`
+    <div class="srow">
+      <div><div class="slabel">Напоминалки</div><div class="ssub">В приложении, без уведомлений</div></div>
+    </div>
+    <div class="srow">
+      <div>
+        <div class="slabel">⚖ Взвешивание</div>
+        <div class="ssub">При открытии Здоровья, если &gt;7 дней без записи</div>
+      </div>
+      ${tgl('weight',cfg.weight&&cfg.weight.on)}
+    </div>
+  `;
+}
+
+function toggleReminderItem(key){
+  const cfg=LS.g('remindersCfg',{weight:{on:true}});
+  if(!cfg[key])cfg[key]={on:false};
+  cfg[key].on=!cfg[key].on;
+  LS.s('remindersCfg',cfg);
+  renderRemindersCard();
+}
+
+function checkWeightReminder(){
+  const cfg=LS.g('remindersCfg',{weight:{on:true}});
+  if(!cfg.weight||!cfg.weight.on)return;
+  if(!weights.length){
+    flash('⚖ Ты ещё не вносил вес — добавь первую запись!');
+    return;
+  }
+  const last=weights[weights.length-1];
+  const parts=last.date.split('-');
+  const lastDate=new Date(+parts[0],+parts[1],+parts[2]);
+  const today=new Date();today.setHours(0,0,0,0);
+  const diffDays=Math.round((today-lastDate)/86400000);
+  if(diffDays>=7){
+    flash('⚖ Не забудь внести вес — прошло '+diffDays+' дней');
+  }
+}
+

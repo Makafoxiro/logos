@@ -76,6 +76,7 @@ function renderSettings(){
   const asTgl=document.getElementById('autoSaveTgl');
   if(asTgl) asTgl.className='tgl'+(autoSaveOn?' on':'');
   renderNotifSettings();
+  renderRemindersCard();
 }
 
 
@@ -101,6 +102,7 @@ yearlyCleanup();
 
 
 function clearToday(){showConfirm('Сбросить задачи сегодня?',()=>{tasks[nowDK()]=[];LS.s('tasks',tasks);buildWeek();});}
+function clearAll(){showConfirm('⚠️ Сбросить АБСОЛЮТНО ВСЁ? Все данные, настройки и история будут удалены безвозвратно.',()=>{localStorage.clear();location.reload();});}
 function openWatchModal(){document.getElementById('watchName').value='';document.getElementById('watchDate').value='';openModal('watchModal');}
 function closeWatchModal(){closeModal('watchModal');}
 function confirmAddWatch(){
@@ -216,8 +218,21 @@ function confirmEditHw(){
   renderMemoBody();
 }
 
-function exportJSON(){const data={habits,comp,habEnabled:[...habEnabled],tasks,mg,goals,freeGoals,annuals,routine,routineLog,weekRtLog,monthRtLog,yearRtLog,tplDone,health,hLog,supps,meds,weights,passwords,birthdays,homework,notes,watchlist,skillTemplates,finLog,finTpl,finPurchases,finDebts,finPieSlices,patches,nid,physDiseases,physParams,mentalParams,morningTime:mTime,eveningTime:eTime,sleepSchedule:LS.g('sleepSchedule',{bed:'23:00',wake:'05:00',naps:[]})};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`logos_${new Date().toISOString().slice(0,10)}.json`;a.click();}
-function importJSON(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);['habits','comp','tasks','mg','goals','freeGoals','annuals','routine','routineLog','weekRtLog','monthRtLog','yearRtLog','tplDone','health','hLog','supps','meds','weights','passwords','birthdays','homework','notes','watchlist','skillTemplates','finLog','finTpl','finPurchases','finDebts','finPieSlices','patches','nid','physDiseases','physParams','mentalParams'].forEach(k=>{if(d[k]!==undefined){window[k]=d[k];LS.s(k,d[k]);}});if(d.habEnabled!==undefined){habEnabled=new Set(d.habEnabled);LS.s('habEnabled',d.habEnabled);}if(d.morningTime!==undefined){mTime=d.morningTime;LS.s('morningTime',mTime);}if(d.eveningTime!==undefined){eTime=d.eveningTime;LS.s('eveningTime',eTime);}if(d.sleepSchedule!==undefined){LS.s('sleepSchedule',d.sleepSchedule);}flash('✓ Данные импортированы');renderCurrent();setTimeout(initNapSessions,100);}catch{flash('Ошибка импорта');}};r.readAsText(f);}
+function exportJSON(){const data={habits,comp,habEnabled:[...habEnabled],tasks,mg,goals,freeGoals,annuals,routine,routineLog,weekRtLog,monthRtLog,yearRtLog,tplDone,health,hLog,supps,meds,weights,passwords,birthdays,homework,notes,watchlist,skillTemplates,finLog,finTpl,finPurchases,finDebts,finPieSlices,patches,nid,physDiseases,physParams,mentalParams,morningTime:mTime,eveningTime:eTime,sleepSchedule:LS.g('sleepSchedule',{bed:'23:00',wake:'05:00',naps:[]}),cycleStartDate,cycleStartSlot,cycleOverrides,notifCfg:LS.g('notifCfg',{}),remindersCfg:LS.g('remindersCfg',{}),interests:LS.g('interests',{cats:[],items:[]}),finBudget:LS.g('finBudget',0),sleepRem:LS.g('sleepRem',{on:false,time:'22:30'}),appTheme,appFont,appLang,autoSaveOn,notifyOn};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`logos_${new Date().toISOString().slice(0,10)}.json`;a.click();}
+function importJSON(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);['habits','comp','tasks','mg','goals','freeGoals','annuals','routine','routineLog','weekRtLog','monthRtLog','yearRtLog','tplDone','health','hLog','supps','meds','weights','passwords','birthdays','homework','notes','watchlist','skillTemplates','finLog','finTpl','finPurchases','finDebts','finPieSlices','patches','nid','physDiseases','physParams','mentalParams'].forEach(k=>{if(d[k]!==undefined){window[k]=d[k];LS.s(k,d[k]);}});if(d.habEnabled!==undefined){habEnabled=new Set(d.habEnabled);LS.s('habEnabled',d.habEnabled);}if(d.morningTime!==undefined){mTime=d.morningTime;LS.s('morningTime',mTime);}if(d.eveningTime!==undefined){eTime=d.eveningTime;LS.s('eveningTime',eTime);}if(d.sleepSchedule!==undefined){LS.s('sleepSchedule',d.sleepSchedule);}
+if(d.cycleStartDate!==undefined){cycleStartDate=d.cycleStartDate;LS.s('cycleStartDate',cycleStartDate);}
+if(d.cycleStartSlot!==undefined){cycleStartSlot=d.cycleStartSlot;LS.s('cycleStartSlot',cycleStartSlot);}
+if(d.cycleOverrides!==undefined){cycleOverrides=d.cycleOverrides;LS.s('cycleOverrides',cycleOverrides);}
+if(d.notifCfg!==undefined){LS.s('notifCfg',d.notifCfg);}
+if(d.remindersCfg!==undefined){LS.s('remindersCfg',d.remindersCfg);}
+if(d.interests!==undefined){LS.s('interests',d.interests);}
+if(d.finBudget!==undefined){LS.s('finBudget',d.finBudget);}
+if(d.sleepRem!==undefined){LS.s('sleepRem',d.sleepRem);}
+if(d.appTheme!==undefined){appTheme=d.appTheme;LS.s('appTheme',d.appTheme);setTheme(d.appTheme);}
+if(d.appFont!==undefined){appFont=d.appFont;LS.s('appFont',d.appFont);setFont(d.appFont);}
+if(d.appLang!==undefined){appLang=d.appLang;LS.s('appLang',d.appLang);setLang(d.appLang);}
+if(d.autoSaveOn!==undefined){autoSaveOn=d.autoSaveOn;LS.s('autoSaveOn',d.autoSaveOn);}
+if(d.notifyOn!==undefined){notifyOn=d.notifyOn;LS.s('notifyOn',d.notifyOn);}flash('✓ Данные импортированы');renderCurrent();setTimeout(initNapSessions,100);}catch{flash('Ошибка импорта');}};r.readAsText(f);}
 
 // ══ NAV ════════════════════════════════════════════════
 function goPage(name,btn){
@@ -236,7 +251,7 @@ function renderCurrent(){
   else if(curPage==='routine')renderRoutine();
   else if(curPage==='habits')renderHabits();
   else if(curPage==='goals')renderGoals();
-  else if(curPage==='health')renderHealth();
+  else if(curPage==='health'){renderHealth();checkWeightReminder();}
   else if(curPage==='memo'){renderMemoTabs();renderMemoBody();}
   else if(curPage==='skills'){renderCycleBlock();renderSkills();}
   else if(curPage==='interests')renderInterests();
@@ -805,7 +820,7 @@ const T = {
   ru:{
     logo:'LOGOS',
     nav:['СЕГОДНЯ','РУТИНА','НЕДЕЛЯ','ЦЕЛИ','ПРИВЫЧКИ','ЗДОРОВЬЕ','НАВЫКИ','ИНТЕРЕСЫ','ДЕНЬГИ','ПАМЯТКА','НАСТРОЙКИ'],
-    'fin-chart-lbl':'доходы и расходы','fin-week-btn':'неделя','fin-month-btn':'месяц',
+    'fin-chart-lbl':'доходы и расходы','fin-month-btn':'месяц',
     'fin-legend-income':'доход','fin-legend-expense':'расход',
     'fin-day-lbl':'записи за день','fin-add-income-btn':'＋ ДОХОД','fin-add-expense-btn':'－ РАСХОД',
     'fin-week-lbl':'шаблон недели','fin-week-inc-btn':'＋ доход','fin-week-exp-btn':'－ расход',
@@ -818,7 +833,16 @@ const T = {
     's-font-lbl':'Шрифт / Chat font','s-font-default':'По умолчанию','s-font-sans':'Засечки','s-font-system':'Моно','s-font-dyslexic':'Дислексия',
     's-data-lbl':'данные','s-export-lbl':'Экспорт JSON','s-export-sub':'Скачать все данные','s-export-btn':'↓ JSON',
     's-import-lbl':'Импорт JSON','s-import-btn':'↑ JSON',
-    's-reset-lbl':'сброс','s-reset-btn':'СБРОСИТЬ ЗАДАЧИ СЕГОДНЯ',
+    's-reset-lbl':'сброс','s-reset-btn':'СБРОСИТЬ ЗАДАЧИ СЕГОДНЯ','s-reset-all-btn':'СБРОСИТЬ ВСЁ',
+    's-autosave-sub':'В Google Drive каждые 2 минуты',
+    's-gdrive-lbl':'google drive','s-gdrive-name':'Google Drive',
+    's-gdrive-save-lbl':'Сохранить в Drive','s-gdrive-save-sub':'Загрузить текущий бэкап',
+    's-gdrive-load-lbl':'Загрузить из Drive','s-gdrive-load-sub':'Восстановить последний бэкап',
+    's-gdrive-auto-lbl':'Загрузить из автосейва','s-gdrive-auto-sub':'Восстановить последний автосейв',
+    's-gdrive-hist-lbl':'История бэкапов','s-gdrive-hist-sub':'Предыдущие версии сохраняются автоматически',
+    's-gdrive-out-lbl':'Выйти из аккаунта','s-gdrive-out-sub':'Отключить Google Drive','s-gdrive-out-btn':'ВЫЙТИ',
+    's-notif-lbl':'уведомления',
+    'gdrive-connected':'🟢 Подключено','gdrive-disconnected':'🔴 Не подключено','gdrive-signin':'ВОЙТИ','gdrive-refresh':'ОБНОВИТЬ',
     's-info-text':'<span style="color:var(--a);font-family:var(--mono)">localStorage</span> — данные в браузере на этом устройстве.<br>Не теряются при закрытии. Для переноса — экспорт JSON.',
     finEmpty:'записей нет — добавь доход или расход',finTplEmpty:'шаблон пуст',finPurchasesEmpty:'покупок нет',finDebtsEmpty:'задолженностей нет',
     income:'ДОХОД',expense:'РАСХОД',balance:'БАЛАНС',
@@ -827,7 +851,7 @@ const T = {
   en:{
     logo:'LOGOS',
     nav:['TODAY','ROUTINE','WEEK','GOALS','HABITS','HEALTH','SPORT','INTERESTS','MONEY','NOTES','SETTINGS'],
-    'fin-chart-lbl':'income & expenses','fin-week-btn':'week','fin-month-btn':'month',
+    'fin-chart-lbl':'income & expenses','fin-month-btn':'month',
     'fin-legend-income':'income','fin-legend-expense':'expense',
     'fin-day-lbl':'today\'s records','fin-add-income-btn':'＋ INCOME','fin-add-expense-btn':'－ EXPENSE',
     'fin-week-lbl':'weekly template','fin-week-inc-btn':'＋ income','fin-week-exp-btn':'－ expense',
@@ -840,7 +864,16 @@ const T = {
     's-font-lbl':'Chat font','s-font-default':'Default','s-font-sans':'Serif','s-font-system':'Mono','s-font-dyslexic':'Dyslexic',
     's-data-lbl':'data','s-export-lbl':'Export JSON','s-export-sub':'Download all data','s-export-btn':'↓ JSON',
     's-import-lbl':'Import JSON','s-import-btn':'↑ JSON',
-    's-reset-lbl':'reset','s-reset-btn':'RESET TODAY\'S TASKS',
+    's-reset-lbl':'reset','s-reset-btn':'RESET TODAY\'S TASKS','s-reset-all-btn':'RESET EVERYTHING',
+    's-autosave-sub':'To Google Drive every 2 minutes',
+    's-gdrive-lbl':'google drive','s-gdrive-name':'Google Drive',
+    's-gdrive-save-lbl':'Save to Drive','s-gdrive-save-sub':'Upload current backup',
+    's-gdrive-load-lbl':'Load from Drive','s-gdrive-load-sub':'Restore last backup',
+    's-gdrive-auto-lbl':'Load from autosave','s-gdrive-auto-sub':'Restore last autosave',
+    's-gdrive-hist-lbl':'Backup history','s-gdrive-hist-sub':'Previous versions are saved automatically',
+    's-gdrive-out-lbl':'Sign out','s-gdrive-out-sub':'Disconnect Google Drive','s-gdrive-out-btn':'SIGN OUT',
+    's-notif-lbl':'notifications',
+    'gdrive-connected':'🟢 Connected','gdrive-disconnected':'🔴 Not connected','gdrive-signin':'SIGN IN','gdrive-refresh':'REFRESH',
     's-info-text':'<span style="color:var(--a);font-family:var(--mono)">localStorage</span> — data stored in this browser.<br>Won\'t be lost on close. Use JSON export to transfer.',
     finEmpty:'no records — add income or expense',finTplEmpty:'template is empty',finPurchasesEmpty:'no purchases',finDebtsEmpty:'no debts',
     income:'INCOME',expense:'EXPENSE',balance:'BALANCE',
@@ -905,7 +938,7 @@ function applyLang(){
     }
   });
   // Named elements by id
-  const ids=['fin-chart-lbl','fin-week-btn','fin-month-btn','fin-legend-income','fin-legend-expense',
+  const ids=['fin-chart-lbl','fin-month-btn','fin-legend-income','fin-legend-expense',
     'fin-day-lbl','fin-add-income-btn','fin-add-expense-btn',
     'fin-week-lbl','fin-week-inc-btn','fin-week-exp-btn',
     'fin-month-lbl','fin-month-inc-btn','fin-month-exp-btn',
@@ -913,7 +946,13 @@ function applyLang(){
     'fin-purchases-lbl','fin-purchase-add-btn','fin-debts-lbl','fin-debt-owe-btn','fin-debt-owed-btn',
     's-pin-lbl','s-pin-change','s-pin-sub','s-pin-btn','s-appear-lbl','s-theme-lbl','s-theme-sub','s-lang-lbl',
     's-data-lbl','s-export-lbl','s-export-sub','s-export-btn','s-import-lbl','s-import-btn',
-    's-reset-lbl','s-reset-btn',
+    's-reset-lbl','s-reset-btn','s-reset-all-btn',
+    's-autosave-sub',
+    's-gdrive-lbl','s-gdrive-name',
+    's-gdrive-save-lbl','s-gdrive-save-sub','s-gdrive-load-lbl','s-gdrive-load-sub',
+    's-gdrive-auto-lbl','s-gdrive-auto-sub','s-gdrive-hist-lbl','s-gdrive-hist-sub',
+    's-gdrive-out-lbl','s-gdrive-out-sub','s-gdrive-out-btn',
+    's-notif-lbl',
     's-font-lbl','s-font-default','s-font-sans','s-font-system','s-font-dyslexic'];
   ids.forEach(id=>{
     const el=document.getElementById(id);if(!el)return;

@@ -517,9 +517,10 @@
 
         <div class="sh">расчёт</div>
         <div class="card">
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:nowrap">
+          <!-- Строка 1: вес + кнопка + тр/нед -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
             <!-- Вес -->
-            <div style="position:relative;flex:2;min-width:0">
+            <div style="position:relative;flex:1;min-width:0">
               <input class="winp" type="number" id="wInp" placeholder="" step="0.1" oninput="if(+this.value>=30)showKBZHURecalc(+this.value);updateWeightGhost()" style="width:100%;padding-right:28px">
               <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:10px;color:var(--t3);pointer-events:none">кг</span>
               <div id="weightGhost" style="position:absolute;left:0;top:0;width:calc(100% - 30px);height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:var(--mono);font-size:14px;color:rgba(255,255,255,0.2);letter-spacing:2px;user-select:none">вес</div>
@@ -533,9 +534,9 @@
               <span style="font-family:var(--mono);font-size:7px;color:var(--t3);letter-spacing:.5px;text-transform:uppercase">тр/нед</span>
               <input type="number" min="0" max="7" id="trainDaysInp" value="4" oninput="health.trainDays=(this.value===''?4:+this.value);LS.s('health',health);if(+document.getElementById('wInp').value>=30)showKBZHURecalc(+document.getElementById('wInp').value)" style="width:46px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-family:var(--mono);font-size:15px;text-align:center;outline:none;padding:6px 4px">
             </div>
-            <!-- Разделитель -->
-            <div style="width:1px;height:32px;background:var(--bd);flex-shrink:0"></div>
-            <!-- Цель -->
+          </div>
+          <!-- Строка 2: цель + разница -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
             <div id="wTargetTag" class="wtag wtag-ok wtag-edit" onclick="openGoalEdit()" title="Нажми чтобы изменить цель" style="flex-shrink:0"></div>
             <div id="wGoalEditRow" style="display:none;align-items:center;gap:4px">
               <input class="wtag-inp" type="number" id="wGoalMin" step="0.5" placeholder="71" onkeydown="if(event.key==='Enter')saveGoalEdit()">
@@ -660,8 +661,7 @@
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
             <span style="font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--t2)">доходы и расходы</span>
             <div style="display:flex;gap:5px">
-              <span id="finWeekBtn" class="sh-btn" onclick="finSetPeriod('week')" style="background:var(--a2);border-color:var(--ab);color:var(--a)">неделя</span>
-              <span id="finMonthBtn" class="sh-btn" onclick="finSetPeriod('month')">месяц</span>
+              <span id="finMonthBtn" class="sh-btn" onclick="finSetPeriod('month')" style="background:var(--a2);border-color:var(--ab);color:var(--a)">месяц</span>
               <span id="finYearBtn" class="sh-btn" onclick="finSetPeriod('year')">год</span>
             </div>
           </div>
@@ -800,36 +800,51 @@
         <div class="scard">
           <div class="srow"><div><div class="slabel" id="s-export-lbl">Экспорт JSON</div><div class="ssub" id="s-export-sub">Скачать все данные</div></div><button class="add-btn" onclick="exportJSON()" id="s-export-btn">↓ JSON</button></div>
           <div class="srow"><div><div class="slabel" id="s-import-lbl">Импорт JSON</div></div><button class="add-btn" onclick="document.getElementById('impF').click()" id="s-import-btn">↑ JSON</button><input type="file" id="impF" accept=".json" style="display:none" onchange="importJSON(this)"></div>
-          <div class="srow"><div><div class="slabel">Автосохранение</div><div class="ssub">В Google Drive каждые 2 минуты</div></div><div id="autoSaveTgl" class="tgl" onclick="toggleAutoSave()"></div></div>
+          <div class="srow"><div><div class="slabel">Автосохранение</div><div class="ssub" id="s-autosave-sub">В Google Drive каждые 2 минуты</div></div><div id="autoSaveTgl" class="tgl" onclick="toggleAutoSave()"></div></div>
         </div>
-        <div class="sh">google drive</div>
+        <div class="sh" id="s-gdrive-lbl">google drive</div>
         <div class="scard" id="gdriveCard">
           <div class="srow" id="gdriveAuthRow">
-            <div><div class="slabel">Google Drive</div><div class="ssub" id="gdriveStatus">🔴 Не подключено</div></div>
+            <div><div class="slabel" id="s-gdrive-name">Google Drive</div><div class="ssub" id="gdriveStatus">🔴 Не подключено</div></div>
             <button class="add-btn" id="gdriveAuthBtn" onclick="gdriveAuth()">ВОЙТИ</button>
           </div>
           <div id="gdriveSyncRow" style="display:none">
             <div class="srow">
-              <div><div class="slabel">Сохранить в Drive</div><div class="ssub">Загрузить текущий бэкап</div></div>
+              <div><div class="slabel" id="s-gdrive-save-lbl">Сохранить в Drive</div><div class="ssub" id="s-gdrive-save-sub">Загрузить текущий бэкап</div></div>
               <button class="add-btn" onclick="gdriveSave()">↑ DRIVE</button>
             </div>
             <div class="srow">
-              <div><div class="slabel">Загрузить из Drive</div><div class="ssub">Восстановить последний бэкап</div></div>
+              <div><div class="slabel" id="s-gdrive-load-lbl">Загрузить из Drive</div><div class="ssub" id="s-gdrive-load-sub">Восстановить последний бэкап</div></div>
               <button class="add-btn" onclick="gdriveLoad()">↓ DRIVE</button>
             </div>
             <div class="srow">
-              <div><div class="slabel">История бэкапов</div><div class="ssub">Предыдущие версии сохраняются</div></div>
-              <button class="add-btn" style="color:var(--t2);border-color:var(--bd)" onclick="gdriveSignOut()">ВЫЙТИ</button>
+              <div>
+                <div class="slabel" id="s-gdrive-auto-lbl">Загрузить из автосейва</div>
+                <div class="ssub" id="s-gdrive-auto-sub">Восстановить последний автосейв</div>
+              </div>
+              <button class="add-btn" onclick="gdriveLoadAutosave()">↓ AUTO</button>
+            </div>
+            <div class="srow">
+              <div>
+                <div class="slabel" id="s-gdrive-hist-lbl">История бэкапов</div>
+                <div class="ssub" id="s-gdrive-hist-sub">Предыдущие версии сохраняются автоматически</div>
+              </div>
+            </div>
+            <div class="srow">
+              <div><div class="slabel" id="s-gdrive-out-lbl">Выйти из аккаунта</div><div class="ssub" id="s-gdrive-out-sub">Отключить Google Drive</div></div>
+              <button class="add-btn" id="s-gdrive-out-btn" style="color:var(--t2);border-color:var(--bd)" onclick="gdriveSignOut()">ВЫЙТИ</button>
             </div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:6px 0 2px" id="gdriveLastSave"></div>
           </div>
         </div>
         <div class="sh" id="s-notif-lbl">уведомления</div>
         <div class="scard" id="notifSettingsCard"></div>
+        <div class="scard" id="remindersCard"></div>
 
         <div class="sh" id="s-reset-lbl">сброс</div>
         <div class="scard">
           <div class="srow"><button class="add-btn" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.25)" onclick="clearToday()" id="s-reset-btn">СБРОСИТЬ ЗАДАЧИ СЕГОДНЯ</button></div>
+          <div class="srow"><button class="add-btn" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.5);background:rgba(239,68,68,0.07)" onclick="clearAll()" id="s-reset-all-btn">СБРОСИТЬ ВСЁ</button></div>
         </div>
         <div class="card" style="border-color:rgba(45,212,191,0.15)">
           <div style="font-size:11px;color:var(--t2);line-height:1.8" id="s-info-text">

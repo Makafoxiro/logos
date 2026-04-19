@@ -207,7 +207,8 @@ function renderCycleBlock(){
       let rightHtml='';
       if(w){
         const userTpls=skillTemplates.filter(t=>t.cycleSlot===w.key);
-        const namesStr=userTpls.length?userTpls.map(t=>t.name).join(', '):w.name;
+        const filledTpls=userTpls.filter(t=>t.exercises&&t.exercises.length>0);
+        const namesStr=filledTpls.length?filledTpls.map(t=>t.name).join(', '):'';
         rightHtml=`<div style="font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 7px;border-radius:5px;border:1px solid ${w.color}44;background:${w.bg};color:${w.color};flex-shrink:0">${w.key}</div><div style="font-size:12px;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${namesStr}</div>`;
       }else{
         rightHtml='<div style="font-size:11px;color:var(--t3);flex:1">отдых</div>';
@@ -460,7 +461,7 @@ function renderSkillsModalPreviews(){
 }
 function confirmSkillsModal(){
   const name=document.getElementById('skillsModalName').value.trim();const exRaw=document.getElementById('skillsModalEx').value.trim();
-  if(!name||!exRaw){flash('Заполни название и упражнения');return;}
+  if(!name){flash('Заполни название');return;}
   // Поддержка: "1) ...\n2) ..." или "1. ...\n2. ..." или через запятую
   let exercises;
   if(/\d+[.)]\s/.test(exRaw)){
@@ -469,7 +470,7 @@ function confirmSkillsModal(){
   } else {
     exercises=exRaw.split(',').map(s=>s.trim()).filter(Boolean);
   }
-  if(!exercises.length){flash('Добавь хотя бы одно');return;}
+  if(!exercises.length){exercises=[];}
   const editId=document.getElementById('skillsModalId').value;
   const cycleSlot=document.getElementById('skillsModalCycleSlot').value;
   const skillType=document.getElementById('skillsModalType').value||'physical';

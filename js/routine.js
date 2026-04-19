@@ -142,9 +142,9 @@ function renderRoutine(){
     {key:'morning',label:'УТРО',color:'var(--a)'},
     {key:'day',label:'ДЕНЬ',color:'var(--amber)'},
     {key:'evening',label:'ВЕЧЕР',color:'var(--blue)'},
-    {key:'week',label:'ЕЖЕНЕДЕЛЬНЫЕ',color:'var(--purple)'},
-    {key:'month',label:'ЕЖЕМЕСЯЧНЫЕ',color:'var(--red)'},
-    {key:'_annuals',label:'ЕЖЕГОДНЫЕ',color:'var(--amber)'},
+    {key:'week',label:'НЕДЕЛЯ',color:'var(--purple)'},
+    {key:'month',label:'МЕСЯЦ',color:'var(--red)'},
+    {key:'_annuals',label:'ГОД',color:'var(--amber)'},
     {key:'_weekdays',label:'ДНИ НЕД.',color:'var(--t2)'},
   ];
   const totalSlides = blocks.length;

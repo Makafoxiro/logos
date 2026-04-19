@@ -72,18 +72,19 @@ const GDrive = (() => {
   // ── UI ───────────────────────────────────────────────────────
   function _updateUI() {
     const authed   = _isAuthed();
+    const tr       = (key, fb) => (typeof t === 'function' ? t(key) : fb);
     const statusEl = document.getElementById('gdriveStatus');
     const syncRow  = document.getElementById('gdriveSyncRow');
     const authBtn  = document.getElementById('gdriveAuthBtn');
     if (!statusEl) return;
     if (authed) {
-      statusEl.textContent = '🟢 Подключено';
-      if (authBtn) authBtn.textContent = 'ОБНОВИТЬ';
+      statusEl.textContent = tr('gdrive-connected', '🟢 Подключено');
+      if (authBtn) authBtn.textContent = tr('gdrive-refresh', 'ОБНОВИТЬ');
       if (syncRow) syncRow.style.display = 'block';
       _showReconnectBanner(false);
     } else {
-      statusEl.textContent = '🔴 Не подключено';
-      if (authBtn) authBtn.textContent = 'ВОЙТИ';
+      statusEl.textContent = tr('gdrive-disconnected', '🔴 Не подключено');
+      if (authBtn) authBtn.textContent = tr('gdrive-signin', 'ВОЙТИ');
       if (syncRow) syncRow.style.display = 'none';
     }
     const lastSave = localStorage.getItem('gdrive_last_save');
@@ -192,6 +193,19 @@ const GDrive = (() => {
       morningTime:    g('morningTime', '08:00'),
       eveningTime:    g('eveningTime', '21:00'),
       sleepSchedule:  g('sleepSchedule', { bed: '23:00', wake: '05:00', naps: [] }),
+      cycleStartDate:  g('cycleStartDate', ''),
+      cycleStartSlot:  g('cycleStartSlot', 0),
+      cycleOverrides:  g('cycleOverrides', {}),
+      notifCfg:        g('notifCfg', {}),
+      remindersCfg:    g('remindersCfg', {}),
+      interests:       g('interests', { cats: [], items: [] }),
+      finBudget:       g('finBudget', 0),
+      sleepRem:        g('sleepRem', { on: false, time: '22:30' }),
+      appTheme:        g('appTheme', 'dark'),
+      appFont:         g('appFont', 'default'),
+      appLang:         g('appLang', 'ru'),
+      autoSaveOn:      g('autoSaveOn', false),
+      notifyOn:        g('notifyOn', false),
       _savedAt: new Date().toISOString(),
       _label:   label || 'manual'
     }, null, 2);
@@ -336,12 +350,69 @@ const GDrive = (() => {
           if (d.morningTime  !== undefined) { window.mTime = d.morningTime;  if (typeof LS !== 'undefined') LS.s('morningTime',  d.morningTime); }
           if (d.eveningTime  !== undefined) { window.eTime = d.eveningTime;  if (typeof LS !== 'undefined') LS.s('eveningTime',  d.eveningTime); }
           if (d.sleepSchedule !== undefined && typeof LS !== 'undefined') LS.s('sleepSchedule', d.sleepSchedule);
+          if (d.cycleStartDate !== undefined) { window.cycleStartDate = d.cycleStartDate; LS.s('cycleStartDate', d.cycleStartDate); }
+          if (d.cycleStartSlot !== undefined) { window.cycleStartSlot = d.cycleStartSlot; LS.s('cycleStartSlot', d.cycleStartSlot); }
+          if (d.cycleOverrides  !== undefined) { window.cycleOverrides  = d.cycleOverrides;  LS.s('cycleOverrides',  d.cycleOverrides); }
+          if (d.notifCfg       !== undefined) { LS.s('notifCfg',       d.notifCfg); }
+          if (d.remindersCfg   !== undefined) { LS.s('remindersCfg',   d.remindersCfg); }
+          if (d.interests      !== undefined) { LS.s('interests',      d.interests); }
+          if (d.finBudget      !== undefined) { LS.s('finBudget',      d.finBudget); }
+          if (d.sleepRem       !== undefined) { LS.s('sleepRem',       d.sleepRem); }
+          if (d.appTheme       !== undefined) { window.appTheme = d.appTheme; LS.s('appTheme', d.appTheme); if (typeof setTheme === 'function') setTheme(d.appTheme); }
+          if (d.appFont        !== undefined) { window.appFont  = d.appFont;  LS.s('appFont',  d.appFont);  if (typeof setFont  === 'function') setFont(d.appFont); }
+          if (d.appLang        !== undefined) { window.appLang  = d.appLang;  LS.s('appLang',  d.appLang);  if (typeof setLang  === 'function') setLang(d.appLang); }
+          if (d.autoSaveOn     !== undefined) { window.autoSaveOn = d.autoSaveOn; LS.s('autoSaveOn', d.autoSaveOn); }
+          if (d.notifyOn       !== undefined) { window.notifyOn   = d.notifyOn;   LS.s('notifyOn',   d.notifyOn); }
 
           if (typeof flash === 'function') flash('✓ Данные загружены из Drive');
           if (typeof renderCurrent === 'function') renderCurrent();
         } catch (e) {
           if (typeof flash === 'function') flash('Ошибка загрузки: ' + e.message);
           console.error('[GDrive] load error', e);
+        }
+      }, () => { if (typeof flash === 'function') flash('Сессия Google истекла — войдите снова'); });
+    },
+
+    async loadAutosave() {
+      _ensureToken(async () => {
+        if (typeof flash === 'function') flash('Загрузка автосейва...');
+        try {
+          const file = await _findFile(FILE_AUTOSAVE);
+          if (!file) {
+            if (typeof flash === 'function') flash('Автосейв не найден в Drive');
+            return;
+          }
+          const text = await _readFile(file.id);
+          const d    = JSON.parse(text);
+          const keys = [
+            'habits','comp','tasks','mg','goals','freeGoals','annuals',
+            'routine','routineLog','tplDone','health','hLog','supps','meds',
+            'weights','passwords','birthdays','homework','notes','watchlist',
+            'skillTemplates','finLog','finTpl','finPurchases','finDebts',
+            'finPieSlices','patches','physDiseases','nid','physParams','mentalParams'
+          ];
+          keys.forEach(k => {
+            if (d[k] !== undefined) { window[k] = d[k]; if (typeof LS !== 'undefined') LS.s(k, d[k]); }
+          });
+          if (d.morningTime   !== undefined) { window.mTime = d.morningTime;  if (typeof LS !== 'undefined') LS.s('morningTime',  d.morningTime); }
+          if (d.eveningTime   !== undefined) { window.eTime = d.eveningTime;  if (typeof LS !== 'undefined') LS.s('eveningTime',  d.eveningTime); }
+          if (d.sleepSchedule !== undefined && typeof LS !== 'undefined') LS.s('sleepSchedule', d.sleepSchedule);
+          if (d.cycleStartDate !== undefined) { window.cycleStartDate = d.cycleStartDate; LS.s('cycleStartDate', d.cycleStartDate); }
+          if (d.cycleStartSlot !== undefined) { window.cycleStartSlot = d.cycleStartSlot; LS.s('cycleStartSlot', d.cycleStartSlot); }
+          if (d.cycleOverrides !== undefined) { window.cycleOverrides  = d.cycleOverrides; LS.s('cycleOverrides', d.cycleOverrides); }
+          if (d.notifCfg      !== undefined) LS.s('notifCfg',    d.notifCfg);
+          if (d.remindersCfg  !== undefined) LS.s('remindersCfg', d.remindersCfg);
+          if (d.interests     !== undefined) LS.s('interests',    d.interests);
+          if (d.finBudget     !== undefined) LS.s('finBudget',    d.finBudget);
+          if (d.sleepRem      !== undefined) LS.s('sleepRem',     d.sleepRem);
+          if (d.appTheme !== undefined) { window.appTheme = d.appTheme; LS.s('appTheme', d.appTheme); if (typeof setTheme === 'function') setTheme(d.appTheme); }
+          if (d.appFont  !== undefined) { window.appFont  = d.appFont;  LS.s('appFont',  d.appFont);  if (typeof setFont  === 'function') setFont(d.appFont); }
+          if (d.appLang  !== undefined) { window.appLang  = d.appLang;  LS.s('appLang',  d.appLang);  if (typeof setLang  === 'function') setLang(d.appLang); }
+          const savedAt = d._savedAt ? new Date(d._savedAt).toLocaleString('ru') : 'неизвестно';
+          if (typeof flash === 'function') flash('✓ Автосейв загружен (' + savedAt + ')');
+          if (typeof renderCurrent === 'function') renderCurrent();
+        } catch (e) {
+          if (typeof flash === 'function') flash('Ошибка загрузки автосейва: ' + e.message);
         }
       }, () => { if (typeof flash === 'function') flash('Сессия Google истекла — войдите снова'); });
     },
@@ -363,6 +434,7 @@ function gdriveAuth()               { GDrive.auth(); }
 function gdriveSignOut()            { GDrive.signOut(); }
 function gdriveSave()               { GDrive.save(); }
 function gdriveLoad()               { GDrive.load(); }
+function gdriveLoadAutosave()       { GDrive.loadAutosave(); }
 function startAutoSave()            { GDrive.startAutoSave(); }
 function stopAutoSave()             { GDrive.stopAutoSave(); }
 function gdriveUpdateUI()           { GDrive.updateUI(); }

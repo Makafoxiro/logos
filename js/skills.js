@@ -349,7 +349,8 @@ function _renderModalSlotButtons(activeSlot){
     return `<div id="skillsModalSlot${k}" onclick="skillsModalSelectSlot('${k}')" onmouseenter="this.querySelector('span')&&(this.querySelector('span').style.display='block')" onmouseleave="this.querySelector('span')&&(this.querySelector('span').style.display='none')" style="position:relative;flex:1;min-width:30px;text-align:center;padding:10px 0;border-radius:var(--rm);border:1px solid ${isActive?(m?m.color+'88':'var(--ab)'):'var(--bd)'};background:${isActive?(m?m.bg:'var(--a2)'):'var(--c2)'};font-family:var(--mono);font-size:15px;color:${isActive?(m?m.color:'var(--a)'):'var(--t2)'};cursor:pointer;user-select:none;transition:.12s">${rmBtn}${k}</div>`;
   }).join('');
   // Next letter button
-  const nextLetter=String.fromCharCode(65+letters.length);
+  const _allLetterSlots=['A','B','C','D','E','F','G','H'];
+  const nextLetter=_allLetterSlots.find(l=>!letters.includes(l))||String.fromCharCode(65+letters.length);
   if(letters.length<8){
     html+=`<div onclick="_addCycleLetterSlot('${nextLetter}')" title="Добавить слот ${nextLetter}" style="flex:0 0 auto;min-width:32px;text-align:center;padding:10px 6px;border-radius:var(--rm);border:1px dashed var(--bd);background:transparent;font-family:var(--mono);font-size:13px;color:var(--t3);cursor:pointer;user-select:none;transition:.12s">+</div>`;
   }

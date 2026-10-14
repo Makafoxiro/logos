@@ -3,8 +3,20 @@ const MSHORT_RU=['янв','фев','мар','апр','май','июн','июл',
 const MSHORT_EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const getMSHORT=()=>{try{return appLang==='en'?MSHORT_EN:MSHORT_RU;}catch(e){return MSHORT_RU;}};
 const MSHORT=new Proxy([],{get:(t,p)=>{ const a=getMSHORT(); return typeof p==='symbol'?a[p]:(p==='length'?a.length:(isNaN(p)?a[p]:a[+p])); }});
-const MFULL=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-const DAYS7=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const MFULL_RU=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const MFULL_EN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const getMFULL=()=>{try{return appLang==='en'?MFULL_EN:MFULL_RU;}catch(e){return MFULL_RU;}};
+const MFULL=new Proxy([],{get:(t,p)=>{ const a=getMFULL(); return typeof p==='symbol'?a[p]:(p==='length'?a.length:(isNaN(p)?a[p]:a[+p])); }});
+const DAYS7_RU=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const DAYS7_EN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const getDAYS7=()=>{try{return appLang==='en'?DAYS7_EN:DAYS7_RU;}catch(e){return DAYS7_RU;}};
+const DAYS7=new Proxy([],{
+  get:(t,p)=>{ const a=getDAYS7(); return typeof p==='symbol'?a[p]:(p==='length'?a.length:(isNaN(p)?a[p]:a[+p])); },
+  has:(t,p)=>{ const a=getDAYS7(); return (p in a); }
+});
+const DAYS_FULL_RU=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота']; // индекс = getDay() (0=вс)
+const DAYS_FULL_EN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const dayFullName=d=>{const dow=(d instanceof Date)?d.getDay():+d;try{return (appLang==='en'?DAYS_FULL_EN:DAYS_FULL_RU)[dow];}catch(e){return DAYS_FULL_RU[dow];}};
 const EMOJIS=['💪','🧠','📖','🥗','😴','🚫','🎯','⚡','✍️','🧘','🚗','💊','🏃','🎨','🥊','📱','💰','🔑'];
 
 // ══ HELPERS ════════════════════════════════════════════
@@ -16,15 +28,14 @@ const pct   = (a,b)=>b?Math.round((a/b)*100):0;
 const getMonday = d=>{const r=new Date(d);r.setDate(r.getDate()-((r.getDay()+6)%7));return r;};
 
 function updateHeader(){
-  const n=new Date();
-  document.getElementById('topDate').textContent=`${n.getDate()} ${MSHORT[n.getMonth()]} ${n.getFullYear()}`;
+  document.getElementById('topDate').textContent=displayDate(new Date());
 }
-function flash(msg){const b=document.getElementById('banner');b.textContent=msg;b.style.display='block';setTimeout(()=>b.style.display='none',2500);}
-function showConfirm(msg, onYes){
+function flash(msg, duration=2500){const b=document.getElementById('banner');b.textContent=msg;b.style.display='block';clearTimeout(b._flashT);b._flashT=setTimeout(()=>b.style.display='none',duration);}
+function showConfirm(msg, onYes, onNo){
   document.getElementById('customConfirmMsg').textContent=msg;
   openModal('customConfirm');
-  document.getElementById('customConfirmYes').onclick=()=>{closeModal('customConfirm');onYes();};
-  document.getElementById('customConfirmNo').onclick=()=>closeModal('customConfirm');
+  document.getElementById('customConfirmYes').onclick=()=>{closeModal('customConfirm');if(typeof onYes==='function')onYes();};
+  document.getElementById('customConfirmNo').onclick=()=>{closeModal('customConfirm');if(typeof onNo==='function')onNo();};
 }
 
 // Task name popup (for overflowed text in narrow day columns)
@@ -61,11 +72,23 @@ function closeTaskPopup(){
 }
 document.addEventListener('click',closeTaskPopup,{passive:true});
 
-function getNavBtn(page){return [...document.querySelectorAll('.nb')].find(b=>(b.getAttribute('onclick')||b.dataset.page||'').includes(page));}
+function getNavBtn(page){return [...document.querySelectorAll('.nb')].find(b=>b.dataset.page===page)||[...document.querySelectorAll('.nb')].find(b=>(b.getAttribute('onclick')||'').includes(page));}
 
 // ── Модальные окна ───────────────────────────────────────
-function openModal(id)  { const el = document.getElementById(id); if (!el) return; el.classList.add('show'); if(!el._touchBlocked){el._touchBlocked=true;el.addEventListener('touchstart',e=>{if(e.target===el||e.target.closest('.modal')||e.target.closest('.modal-box')||e.target.closest('.modal-body')||e.target.closest('.modal-sheet'))return;e.preventDefault();e.stopPropagation();},{passive:false});} }
-function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('show'); }
+// Счётчик открытых модалок (для вложенных — напр. фото ДЗ поверх редактирования)
+let _modalLockCount = 0;
+function lockBodyScroll(){
+  if(_modalLockCount++ === 0){
+    document.documentElement.classList.add('modal-open');
+  }
+}
+function unlockBodyScroll(){
+  if(_modalLockCount > 0 && --_modalLockCount === 0){
+    document.documentElement.classList.remove('modal-open');
+  }
+}
+function openModal(id)  { const el = document.getElementById(id); if (!el) return; el.classList.add('show'); lockBodyScroll(); if(!el._touchBlocked){el._touchBlocked=true;el.addEventListener('touchstart',e=>{if(e.target===el||e.target.closest('.modal')||e.target.closest('.modal-box')||e.target.closest('.modal-body')||e.target.closest('.modal-sheet'))return;e.preventDefault();e.stopPropagation();},{passive:false});} }
+function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('show'); unlockBodyScroll(); }
 
 // ── Универсальное удаление ───────────────────────────────
 function deleteItem(arr, lsKey, id, renderFn) {
@@ -84,16 +107,59 @@ function parseLocalDate(dateStr) {
   const d = new Date(+p[0], +p[1] - 1, +p[2]);
   return isNaN(d) ? null : d;
 }
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = parseLocalDate(dateStr);
-  if (!d) return '';
-  return `${d.getDate()} ${MFULL[d.getMonth()]} ${d.getFullYear()}`;
+// ══ UNIFIED DATE DISPLAY ═══════════════════════════════════
+// Канонический формат даты всего приложения: «9 апр 2026».
+// key: Date | 'YYYY-MM-DD' (ISO из input[type=date], месяц с 1) | 'Y-M-D' (ключ dk(), месяц с 0)
+// opts: {noYear:true} → «9 апр» | {monthOnly:true} → «апр 2026» | {weekday:true} → «Пн 9 апр» | {upper:true}
+function toDateLike(key,dkMode){
+  if(key instanceof Date)return key;
+  if(typeof key!=='string'||!key)return null;
+  const p=key.split('-');
+  if(p.length!==3)return null;
+  const y=+p[0],a=+p[1],d=+p[2];
+  if(isNaN(y)||isNaN(a)||isNaN(d))return null;
+  // ISO (input[type=date], месяц 1-based) — по умолчанию; dk() (месяц 0-based) — если dkMode или ключ не падднут
+  const iso=dkMode?false:/^\d{4}-\d{2}-\d{2}$/.test(key);
+  const r=new Date(y,iso?a-1:a,d);
+  return isNaN(r)?null:r;
 }
-function formatMonthDay(dateStr) {
-  const d = parseLocalDate(dateStr);
-  if (!d) return '';
-  return `${d.getDate()} ${MSHORT[d.getMonth()]}`;
+function dkToDate(key){ // явный разбор ключа dk(): «2026-3-9» → Date(2026,3,9)
+  const p=String(key).split('-');
+  return new Date(+p[0],+p[1],+p[2]);
+}
+function displayDate(key,opts){
+  opts=opts||{};
+  const d=toDateLike(key,opts.dk);
+  if(!d||isNaN(d))return '';
+  let out;
+  if(opts.monthOnly)out=`${MSHORT[d.getMonth()]} ${d.getFullYear()}`;
+  else out=`${d.getDate()} ${MSHORT[d.getMonth()]}`+(opts.noYear?'':' '+d.getFullYear());
+  if(opts.weekday)out=`${DAYS7[(d.getDay()+6)%7]} ${out}`;
+  return opts.upper?out.toUpperCase():out;
+}
+function displayDateRange(a,b,opts){
+  opts=opts||{};
+  const da=toDateLike(a,opts.dk),db=toDateLike(b,opts.dk);
+  if(!da||!db)return '';
+  const sameYear=da.getFullYear()===db.getFullYear();
+  const base=Object.assign({},opts);delete base.noYear;
+  const start=displayDate(da,sameYear?Object.assign({},base,{noYear:true}):base);
+  const end=displayDate(db,opts.noYear?Object.assign({},base,{noYear:true}):base);
+  return `${start} — ${end}`;
+}
+// Алиасы (обратная совместимость)
+function formatDate(dateStr){return displayDate(dateStr);}
+function formatMonthDay(dateStr){return displayDate(dateStr,{noYear:true});}
+
+// Дата + время для служебных меток (бэкапы, автосейв): «9 апр 2026, 15:30»
+function displayDateTime(dateLike, opts){
+  opts=opts||{};
+  const d=toDateLike(dateLike,opts.dk);
+  if(!d||isNaN(d))return '';
+  const date=displayDate(d,opts);
+  const hh=String(d.getHours()).padStart(2,'0');
+  const mm=String(d.getMinutes()).padStart(2,'0');
+  return `${date}, ${hh}:${mm}`;
 }
 
 function daysToAnnual(dateStr, now) {

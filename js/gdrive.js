@@ -115,7 +115,7 @@ const GDrive = (() => {
   function _showReconnectBanner(show) {
     const b = document.getElementById('gdriveSessionModal');
     if (!b) return;
-    if (show) b.classList.add('show'); else b.classList.remove('show');
+    if (show) openModal('gdriveSessionModal'); else closeModal('gdriveSessionModal');
   }
 
   // ── Drive API helpers ────────────────────────────────────────
@@ -204,6 +204,7 @@ const GDrive = (() => {
       habits:         g('habits', []),
       comp:           g('comp', {}),
       tasks:          g('tasks', {}),
+      permanentTasks: g('permanentTasks', []),
       goals:          g('goals', []),
       freeGoals:      g('freeGoals', []),
       annuals:        g('annuals', []),
@@ -219,7 +220,6 @@ const GDrive = (() => {
       supps:          g('supps', []),
       meds:           g('meds', []),
       weights:        g('weights', []),
-      passwords:      g('passwords', []),
       birthdays:      g('birthdays', []),
       homework:       g('homework', []),
       notes:          g('notes', []),
@@ -230,7 +230,6 @@ const GDrive = (() => {
       finPurchases:   g('finPurchases', []),
       finDebts:       g('finDebts', []),
       finPieSlices:   g('finPieSlices', []),
-      patches:        g('patches', []),
       physDiseases:   g('physDiseases', []),
       physParams:     g('physParams', []),
       mentalParams:   g('mentalParams', []),
@@ -238,8 +237,7 @@ const GDrive = (() => {
       morningTime:    g('morningTime', '08:00'),
       eveningTime:    g('eveningTime', '21:00'),
       sleepSchedule:  g('sleepSchedule', { bed: '23:00', wake: '05:00', naps: [] }),
-      cycleStartDate:  g('cycleStartDate', ''),
-      cycleStartSlot:  g('cycleStartSlot', 0),
+      cycleFirstWeekHeavy: g('cycleFirstWeekHeavy', true),
       cycleOverrides:  g('cycleOverrides', {}),
       notifCfg:        g('notifCfg', {}),
       remindersCfg:    g('remindersCfg', {}),
@@ -301,7 +299,7 @@ const GDrive = (() => {
         await _upload(FILE_BACKUP, content, existing ? existing.id : null);
       }
 
-      const saveTime = new Date().toLocaleString('ru');
+      const saveTime = displayDateTime(new Date());
       localStorage.setItem('gdrive_last_save', saveTime);
       _updateUI();
       if (typeof flash === 'function') {
@@ -374,12 +372,12 @@ const GDrive = (() => {
           const d    = JSON.parse(text);
 
           const keys = [
-            'habits','comp','tasks','goals','freeGoals','annuals',
+            'habits','comp','tasks','permanentTasks','goals','freeGoals','annuals',
             'routine','routineLog','weekRtLog','monthRtLog','yearRtLog',
             'tplDone','habEnabled','health','hLog','supps','meds',
-            'weights','passwords','birthdays','homework','notes','watchlist',
+            'weights','birthdays','homework','notes','watchlist',
             'skillTemplates','finLog','finTpl','finPurchases','finDebts',
-            'finPieSlices','patches','physDiseases','nid',
+            'finPieSlices','physDiseases','nid',
             // Новые раздельные ключи
             'physParams','mentalParams'
           ];
@@ -392,8 +390,7 @@ const GDrive = (() => {
           if (d.morningTime  !== undefined) { window.mTime = d.morningTime;  if (typeof LS !== 'undefined') LS.s('morningTime',  d.morningTime); }
           if (d.eveningTime  !== undefined) { window.eTime = d.eveningTime;  if (typeof LS !== 'undefined') LS.s('eveningTime',  d.eveningTime); }
           if (d.sleepSchedule !== undefined && typeof LS !== 'undefined') LS.s('sleepSchedule', d.sleepSchedule);
-          if (d.cycleStartDate !== undefined) { window.cycleStartDate = d.cycleStartDate; LS.s('cycleStartDate', d.cycleStartDate); }
-          if (d.cycleStartSlot !== undefined) { window.cycleStartSlot = d.cycleStartSlot; LS.s('cycleStartSlot', d.cycleStartSlot); }
+          if (d.cycleFirstWeekHeavy !== undefined) { window.cycleFirstWeekHeavy = d.cycleFirstWeekHeavy; LS.s('cycleFirstWeekHeavy', d.cycleFirstWeekHeavy); }
           if (d.cycleOverrides  !== undefined) { window.cycleOverrides  = d.cycleOverrides;  LS.s('cycleOverrides',  d.cycleOverrides); }
           if (d.notifCfg       !== undefined) { LS.s('notifCfg',       d.notifCfg); }
           if (d.remindersCfg   !== undefined) { LS.s('remindersCfg',   d.remindersCfg); }
@@ -412,7 +409,12 @@ const GDrive = (() => {
           }
 
           if (typeof flash === 'function') flash('✓ Данные загружены из Drive');
-          if (typeof renderCurrent === 'function') renderCurrent();
+                    // let-переменные не меняются через window[k] — присваиваем явно + миграция
+          if (d.routine !== undefined) { routine = d.routine; }
+          if (d.routineLog !== undefined) { routineLog = d.routineLog; }
+          if (d.tplDone !== undefined) { tplDone = d.tplDone; }
+          if (typeof migrateRoutine === 'function') migrateRoutine();
+if (typeof renderCurrent === 'function') renderCurrent();
         } catch (e) {
           if (typeof flash === 'function') flash('Ошибка загрузки: ' + e.message);
           console.error('[GDrive] load error', e);
@@ -432,12 +434,12 @@ const GDrive = (() => {
           const text = await _readFile(file.id);
           const d    = JSON.parse(text);
           const keys = [
-            'habits','comp','tasks','goals','freeGoals','annuals',
+            'habits','comp','tasks','permanentTasks','goals','freeGoals','annuals',
             'routine','routineLog','weekRtLog','monthRtLog','yearRtLog',
             'tplDone','habEnabled','health','hLog','supps','meds',
-            'weights','passwords','birthdays','homework','notes','watchlist',
+            'weights','birthdays','homework','notes','watchlist',
             'skillTemplates','finLog','finTpl','finPurchases','finDebts',
-            'finPieSlices','patches','physDiseases','nid','physParams','mentalParams'
+            'finPieSlices','physDiseases','nid','physParams','mentalParams'
           ];
           keys.forEach(k => {
             if (d[k] !== undefined) { window[k] = d[k]; if (typeof LS !== 'undefined') LS.s(k, d[k]); }
@@ -445,8 +447,7 @@ const GDrive = (() => {
           if (d.morningTime   !== undefined) { window.mTime = d.morningTime;  if (typeof LS !== 'undefined') LS.s('morningTime',  d.morningTime); }
           if (d.eveningTime   !== undefined) { window.eTime = d.eveningTime;  if (typeof LS !== 'undefined') LS.s('eveningTime',  d.eveningTime); }
           if (d.sleepSchedule !== undefined && typeof LS !== 'undefined') LS.s('sleepSchedule', d.sleepSchedule);
-          if (d.cycleStartDate !== undefined) { window.cycleStartDate = d.cycleStartDate; LS.s('cycleStartDate', d.cycleStartDate); }
-          if (d.cycleStartSlot !== undefined) { window.cycleStartSlot = d.cycleStartSlot; LS.s('cycleStartSlot', d.cycleStartSlot); }
+          if (d.cycleFirstWeekHeavy !== undefined) { window.cycleFirstWeekHeavy = d.cycleFirstWeekHeavy; LS.s('cycleFirstWeekHeavy', d.cycleFirstWeekHeavy); }
           if (d.cycleOverrides !== undefined) { window.cycleOverrides  = d.cycleOverrides; LS.s('cycleOverrides', d.cycleOverrides); }
           if (d.notifCfg      !== undefined) LS.s('notifCfg',    d.notifCfg);
           if (d.remindersCfg  !== undefined) LS.s('remindersCfg', d.remindersCfg);
@@ -463,9 +464,14 @@ const GDrive = (() => {
             window.skillTemplates = d.skillTemplates;
             if (typeof LS !== 'undefined') { LS.s('sportTemplates', d.skillTemplates); LS.s('skillTemplates', d.skillTemplates); }
           }
-          const savedAt = d._savedAt ? new Date(d._savedAt).toLocaleString('ru') : 'неизвестно';
+          const savedAt = d._savedAt ? displayDateTime(new Date(d._savedAt)) : 'неизвестно';
           if (typeof flash === 'function') flash('✓ Автосейв загружен (' + savedAt + ')');
-          if (typeof renderCurrent === 'function') renderCurrent();
+                    // let-переменные не меняются через window[k] — присваиваем явно + миграция
+          if (d.routine !== undefined) { routine = d.routine; }
+          if (d.routineLog !== undefined) { routineLog = d.routineLog; }
+          if (d.tplDone !== undefined) { tplDone = d.tplDone; }
+          if (typeof migrateRoutine === 'function') migrateRoutine();
+if (typeof renderCurrent === 'function') renderCurrent();
         } catch (e) {
           if (typeof flash === 'function') flash('Ошибка загрузки автосейва: ' + e.message);
         }
@@ -478,8 +484,7 @@ const GDrive = (() => {
     isAuthed:      _isAuthed,
 
     closeSessionModal() {
-      const m = document.getElementById('gdriveSessionModal');
-      if (m) m.classList.remove('show');
+      closeModal('gdriveSessionModal');
     }
   };
 })();
@@ -496,9 +501,10 @@ function gdriveIsAuthed()           { return GDrive.isAuthed(); }
 function closeGdriveSessionModal()  { GDrive.closeSessionModal(); }
 
 // ── Инициализация ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+// DOM уже загружен (boot.js подключает этот файл динамически) — вызываем сразу.
+(function _gdriveInit(){
   GDrive.updateUI();
   if (typeof autoSaveOn !== 'undefined' && autoSaveOn && GDrive.isAuthed()) {
     setTimeout(() => GDrive.startAutoSave(), 1000);
   }
-});
+})();

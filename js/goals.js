@@ -63,16 +63,16 @@ function renderGoals(){
     if(g.deadline){
       const days=daysToDeadline(g.deadline,now);
       let dlColor='var(--amber)';
-      let dlLabel=formatDate(g.deadline);
+      let dlLabel=displayDate(g.deadline);
       if(days!==null){
-        if(days<0){dlColor='var(--red)';dlLabel=`${formatDate(g.deadline)} → просрочено`;}
+        if(days<0){dlColor='var(--red)';dlLabel=`${displayDate(g.deadline)} → просрочено`;}
         else if(days===0){dlColor='var(--red)';dlLabel='→ сегодня!';}
-        else if(days<=30){dlColor='var(--amber)';dlLabel=`${formatDate(g.deadline)} → ${days}д.`;}
+        else if(days<=30){dlColor='var(--amber)';dlLabel=`${displayDate(g.deadline)} → ${days}д.`;}
         else{
           const yrs=Math.floor(days/365);
           const mths=Math.floor((days%365)/30);
           dlColor='var(--a)';
-          dlLabel=`${formatDate(g.deadline)} → ${yrs>0?yrs+'г. ':''}${mths>0&&yrs<5?mths+'м.':''}`.trim();
+          dlLabel=`${displayDate(g.deadline)} → ${yrs>0?yrs+'г. ':''}${mths>0&&yrs<5?mths+'м.':''}`.trim();
         }
       }
       dlHtml=`<div style="font-family:var(--mono);font-size:10px;color:${dlColor};margin-top:4px;padding:2px 8px;background:rgba(251,191,36,0.08);border:1px solid ${dlColor}33;border-radius:10px;display:inline-block">${dlLabel}</div>`;
@@ -148,9 +148,8 @@ function saveFreeGoalEdit(){
   LS.s('freeGoals',freeGoals);renderFreeGoals();closeFreeGoalEditModal();
 }
 function openFreeGoalPhoto(src){
-  const modal=document.getElementById('hwPhotoModal');
   const img=document.getElementById('hwPhotoModalImg');
-  if(modal&&img){img.src=src;modal.classList.add('show');}
+  if(img){img.src=src;openModal('hwPhotoModal');}
 }
 function toggleFreeGoalDone(id){
   const g=freeGoals.find(x=>x.id===id);if(!g)return;
@@ -202,7 +201,7 @@ function annualMarkDone(id){
   a.date='';
   LS.s('annuals',annuals);
   renderRoutine();
-  flash(`✓ Отмечено! Следующий раз: ${(()=>{const n=_calcNext(a.lastDate,a.period);return n?n.toLocaleDateString('ru-RU'):''})()}`);
+  flash(`✓ Отмечено! Следующий раз: ${(()=>{const n=_calcNext(a.lastDate,a.period);return n?displayDate(n):''})()}`);
 }
 
 let _annualEditId=null;

@@ -9,7 +9,8 @@ function getWeekMonday(offset){
 }
 
 function buildWeek(){
-  
+
+  if(typeof rolloverPermanentTasks==='function')rolloverPermanentTasks();
   renderNotificationsPanel();
   const scroll=document.getElementById('weekScroll');
   scroll.innerHTML='';
@@ -59,30 +60,28 @@ function updateWNav(){
   const end=new Date(mon);end.setDate(mon.getDate()+6);
   const isCurrentWeek=weekOffset===0;
   document.getElementById('wnLbl').textContent=
-    (isCurrentWeek?'Эта неделя · ':'')+`${mon.getDate()} ${MSHORT[mon.getMonth()]} — ${end.getDate()} ${MSHORT[end.getMonth()]}`;
+    (isCurrentWeek?'Эта неделя · ':'')+displayDateRange(mon,end);
   document.getElementById('wnDots').innerHTML=DAYS7.map((_,i)=>`<div class="wdot${i===curCardIdx?' on':''}"></div>`).join('');
 }
 
 // track which cards show template view
 const cardTplView={};
+// 📌 режим добавления: key дня → true если следующая задача будет постоянной
+let _wcPermMode={};
 
 function paintCard(card,d){
   const key=dk(d);
   card.dataset.daykey=key;
   const arr=tasks[key]||[];
   const realArr=arr.filter(x=>!x._isHabit);
-  const tplArr=Array.isArray(routine.weekdays[(d.getDay()+6)%7])?routine.weekdays[(d.getDay()+6)%7]:[];
-  const _daySlot=_cycleInfoForDate(dk(d));
-  const _skillsTplItems=_daySlot?skillTemplates.filter(t=>t.cycleSlot===_daySlot.key):[];
+  const _skillsTplItems=(typeof templatesForDate==='function')?templatesForDate(dk(d)):[];
   const _skillsCount=_skillsTplItems.reduce((s,t)=>s+t.exercises.length,0);
   const _tplKey2=dk(d);
-  const _tplDoneCount=tplArr.filter((_,i)=>!!tplDone[_tplKey2+'__tpl__'+i]).length;
   const _skillsDoneCount=_skillsTplItems.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[_tplKey2+'__sport__'+t.id+'__'+ei]).length,0);
-  const done=realArr.filter(x=>x.done).length+_tplDoneCount+_skillsDoneCount,total=realArr.length+tplArr.length+_skillsCount,p=pct(done,total);
+  const done=realArr.filter(x=>x.done).length+_skillsDoneCount,total=realArr.length+_skillsCount,p=pct(done,total);
   const circ=107.0,off=circ-(p/100)*circ;
   const dow=(d.getDay()+6)%7;
   const showTpl=!!cardTplView[key];
-  const tpl=Array.isArray(routine.weekdays[dow])?routine.weekdays[dow]:[];
 
   const isMob=window.innerWidth<768;
   const h1=showTpl?'display:none':'';
@@ -118,19 +117,24 @@ function paintCard(card,d){
       '</div>'+
       '<div class="dc-cnt">'+(total?(done+'/'+total):'—')+'</div>';
 
+  const _hide=showTpl?'display:none;':'';
   card.innerHTML=
     headHTML+
     '<div class="dc-tasks" style="'+(isMob?'padding:0 12px;':'')+h1+'"></div>'+
     '<div class="dc-tpl-list" style="'+(isMob?'padding:0 12px;':'')+h2+'"></div>'+
-    '<div class="dc-footer" style="display:flex;align-items:center;gap:'+(isMob?'6':'3')+'px;'+(isMob?'padding:8px 12px 10px':'')+'">'+
-      '<input class="dc-inp" id="taskinp-'+key+'" placeholder="задача..." maxlength="300" style="flex:1;'+(showTpl?'visibility:hidden;pointer-events:none;':'')+'">'+
-      '<div class="dc-abtn" id="taskabtn-'+key+'" style="'+(showTpl?'visibility:hidden;pointer-events:none;':'')+(isMob?'width:36px;height:36px;font-size:20px;':'')+'flex-shrink:0">+</div>'+
-      '<div class="dc-tpl-btn'+(showTpl?' on':'')+'" id="tplbtn-'+key+'" style="flex-shrink:0'+(isMob?';font-size:13px;padding:6px 10px':'')+'">📋</div>'+
+    '<div class="dc-footer" style="display:flex;align-items:stretch;gap:'+(isMob?'6':'3')+'px;'+(isMob?'padding:8px 12px 10px':'')+'">'+
+      '<input class="dc-inp" id="taskinp-'+key+'" placeholder="'+(_wcPermMode[key]?'постоянная задача…':'задача...')+'" maxlength="300" style="flex:1;'+_hide+'">'+
+      '<div class="dc-btns-col">'+
+        '<div class="dc-perm-btn'+(_wcPermMode[key]?' on':'')+'" id="permbtn-'+key+'" title="Постоянная задача (плавает на неделю)" style="'+_hide+'">📌</div>'+
+        '<div class="dc-abtn" id="taskabtn-'+key+'" style="'+_hide+'">+</div>'+
+        '<div class="dc-tpl-btn'+(showTpl?' on':'')+'" id="tplbtn-'+key+'">📋</div>'+
+      '</div>'+
     '</div>';
 
   // task space
   const inp=card.querySelector('#taskinp-'+key);
   const abtn=card.querySelector('#taskabtn-'+key);
+  const permbtn=card.querySelector('#permbtn-'+key);
   const tplbtn=card.querySelector('#tplbtn-'+key);
   const tplList=card.querySelector('.dc-tpl-list');
   const tplInp=card.querySelector('#tplinp-'+key);
@@ -138,6 +142,14 @@ function paintCard(card,d){
 
   if(inp) inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();wcAddTask(card,key);}});
   if(abtn) abtn.addEventListener('click',()=>wcAddTask(card,key));
+
+  // 📌 переключатель режима: постоянная задача vs обычное дело дня
+  if(permbtn) permbtn.addEventListener('click',()=>{
+    _wcPermMode[key]=!_wcPermMode[key];
+    const on=!!_wcPermMode[key];
+    permbtn.classList.toggle('on',on);
+    if(inp){inp.placeholder=on?'постоянная задача…':'задача...';inp.focus();}
+  });
 
   // toggle between spaces
   if(tplbtn) tplbtn.addEventListener('click',()=>{
@@ -150,15 +162,13 @@ function paintCard(card,d){
   function makeLabel(txt){const l=document.createElement('div');l.style.cssText='font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;padding:2px 2px 1px';l.textContent=txt;return l;}
   function tplRender(){
     if(!tplList)return;
-    const items=Array.isArray(routine.weekdays[dow])?routine.weekdays[dow]:[];
     const activeHabits=habits.filter(h=>getComp()[h.id]);
     // skills templates assigned to this weekday (0=Пн..6=Вс)
     const _ds=dk(d);
-    const _slotInfo=_cycleInfoForDate(_ds);
-    const skillsItems=_slotInfo?skillTemplates.filter(t=>t.cycleSlot===_slotInfo.key):[];
+    const skillsItems=(typeof templatesForDate==='function')?templatesForDate(_ds):[];
     tplList.innerHTML='';
 
-    const hasAnything=skillsItems.length>0||items.length>0||activeHabits.length>0;
+    const hasAnything=skillsItems.length>0||activeHabits.length>0;
     if(!hasAnything){
       const empty=document.createElement('div');
       empty.className='dc-tpl-empty';
@@ -167,42 +177,8 @@ function paintCard(card,d){
       return;
     }
 
-    // ── ДНИ НЕД. ──
-    if(items.length>0){
-      tplList.appendChild(makeLabel('дни нед.'));
-      items.forEach((name,i)=>{
-        const tplKey=key+'__tpl__'+i;
-        const isDone=!!(tplDone[tplKey]);
-        const row=document.createElement('div');
-        row.className='dc-task'+(isDone?' done':'');
-        row.style.cursor='pointer';
-        const chk=document.createElement('div');chk.className='dc-chk';
-        if(isDone)chk.textContent='✓';
-        const rawName=typeof name==='object'?name.name:name;
-        const tn=document.createElement('div');tn.className='dc-tn';tn.textContent=rawName;
-        const toggle=()=>{
-          tplDone[tplKey]=!tplDone[tplKey];
-          if(!tplDone[tplKey])delete tplDone[tplKey];
-          LS.s('tplDone',tplDone);
-          tplRender();
-          updateRingFromTpl();
-        };
-        chk.addEventListener('click',e=>{e.stopPropagation();toggle();});
-        tn.addEventListener('click',e=>{
-          e.stopPropagation();
-          if(tn.scrollWidth>tn.clientWidth+1){showTaskPopup(rawName,e);}
-          else{toggle();}
-        });
-        row.addEventListener('click',toggle);
-        row.id='dc-tpl-wd-'+i;
-        row.appendChild(chk);row.appendChild(tn);
-        tplList.appendChild(row);
-      });
-    }
-
     // ── НАВЫКИ ──
     if(skillsItems.length>0){
-      if(items.length>0)tplList.appendChild(makeSep());
       tplList.appendChild(makeLabel('навыки'));
       skillsItems.forEach(tpl=>{
         // Collapsible header for skill template (no hyperlink)
@@ -279,7 +255,7 @@ function paintCard(card,d){
 
     // ── ПРИВЫЧКИ ──
     if(activeHabits.length>0){
-      if(skillsItems.length>0||items.length>0)tplList.appendChild(makeSep());
+      if(skillsItems.length>0)tplList.appendChild(makeSep());
       tplList.appendChild(makeLabel('привычки'));
       activeHabits.forEach(h=>{
         const row=document.createElement('div');
@@ -300,14 +276,11 @@ function paintCard(card,d){
   function updateRingFromTpl(){
     const _arr=tasks[key]||[];
     const _real=_arr.filter(x=>!x._isHabit);
-    const _tplArr2=Array.isArray(routine.weekdays[dow])?routine.weekdays[dow]:[];
-    const _slotInfo2=_cycleInfoForDate(key);
-    const _skItems2=_slotInfo2?skillTemplates.filter(t=>t.cycleSlot===_slotInfo2.key):[];
+    const _skItems2=(typeof templatesForDate==='function')?templatesForDate(key):[];
     const _spCnt=_skItems2.reduce((s,t)=>s+t.exercises.length,0);
-    const _tplDoneCnt=_tplArr2.filter((_,i)=>!!tplDone[key+'__tpl__'+i]).length;
     const _skDoneCnt=_skItems2.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[key+'__sport__'+t.id+'__'+ei]).length,0);
-    const _done=_real.filter(x=>x.done).length+_tplDoneCnt+_skDoneCnt;
-    const _total=_real.length+_tplArr2.length+_spCnt;
+    const _done=_real.filter(x=>x.done).length+_skDoneCnt;
+    const _total=_real.length+_spCnt;
     const _p=pct(_done,_total);
     const _circ=107.0,_off=_circ-(_p/100)*_circ;
     const _isMob=window.innerWidth<768;
@@ -330,12 +303,50 @@ function wcAddTask(card,key){
   const inp=card.querySelector('#taskinp-'+key);
   if(!inp)return;
   const name=inp.value.trim();if(!name)return;
+  // режим 📌 — постоянная (плавающая) задача текущей недели
+  if(_wcPermMode[key]){
+    permanentTasks.push({id:nid++,name,done:false});
+    LS.s('permanentTasks',permanentTasks);LS.s('nid',nid);
+    inp.value='';
+    // перерисовать все карточки текущей недели + страницу «Сегодня»
+    refreshPermanentViews();
+    return;
+  }
   if(!tasks[key])tasks[key]=[];
   tasks[key].push({id:nid++,name,done:false});
   LS.s('tasks',tasks);LS.s('nid',nid);
   inp.value='';
   wcRenderTasks(card,key);
   wcUpdateRing(card,key);
+}
+
+// ── Постоянные (плавающие) задачи недели ──
+function wcTogglePermanent(id){
+  const t=(permanentTasks||[]).find(x=>String(x.id)===String(id));
+  if(!t)return;
+  // клик по кружку = отметить выполненной (остаётся видимой, зачёркнутой)
+  t.done=!t.done;
+  LS.s('permanentTasks',permanentTasks);
+  refreshPermanentViews();
+}
+function wcDelPermanent(id){
+  permanentTasks=(permanentTasks||[]).filter(x=>String(x.id)!==String(id));
+  LS.s('permanentTasks',permanentTasks);
+  refreshPermanentViews();
+}
+// При смене недели: выполненные убираем, невыполненные «переезжают» на новую неделю
+function rolloverPermanentTasks(){
+  const curWeek=dk(getMonday(new Date()));
+  const last=LS.g('lastPermWeek',curWeek);
+  if(last!==curWeek){
+    permanentTasks=(permanentTasks||[]).filter(t=>!t.done);
+    LS.s('permanentTasks',permanentTasks);
+    LS.s('lastPermWeek',curWeek);
+  }
+}
+function refreshPermanentViews(){
+  if(typeof curPage!=='undefined'&&curPage==='week'&&typeof buildWeek==='function')buildWeek();
+  if(typeof curPage!=='undefined'&&curPage==='today'&&typeof renderTodayTasks==='function')renderTodayTasks(new Date());
 }
 
 // ── Drag state for day-card tasks ──
@@ -345,6 +356,27 @@ let _wcTouch={key:null,idx:null,startY:0,startX:0};
 function wcRenderTasks(card,key){
   const el=card.querySelector('.dc-tasks');if(!el)return;
   el.innerHTML='';
+  // Постоянные (плавающие) задачи — только для текущей недели, сверху, с подсветкой
+  if(weekOffset===0&&(permanentTasks||[]).length){
+    (permanentTasks||[]).forEach(t=>{
+      const prow=document.createElement('div');
+      prow.className='dc-task perm-task'+(t.done?' done':'');
+      prow.id='dc-perm-'+t.id;
+      prow.innerHTML=`<div class="dc-chk">${t.done?'✓':''}</div><div class="dc-tn">📌 ${t.name}</div>`;
+      const del=document.createElement('button');
+      del.className='dc-tdel';del.textContent='✕';del.title='Удалить';
+      del.addEventListener('click',e=>{e.stopPropagation();wcDelPermanent(t.id);});
+      prow.appendChild(del);
+      prow.addEventListener('click',()=>wcTogglePermanent(t.id));
+      el.appendChild(prow);
+    });
+    // тонкий разделитель перед обычными делами
+    if((tasks[key]||[]).length){
+      const sep=document.createElement('div');
+      sep.style.cssText='height:1px;background:var(--bd);margin:3px 2px;flex-shrink:0';
+      el.appendChild(sep);
+    }
+  }
   (tasks[key]||[]).forEach((t,i)=>{
     const isHabit=!!t._isHabit;
     const row=document.createElement('div');
@@ -442,18 +474,11 @@ function wcReorderTask(key,fromIdx,toIdx){
 function wcUpdateRing(card,key){
   const arr=tasks[key]||[];
   const realArr=arr.filter(x=>!x._isHabit);
-  // parse dow from key "YYYY-M-D"
-  const _kp=key.split('-');
-  const _kd=new Date(+_kp[0],+_kp[1],+_kp[2]);
-  const _dow=(_kd.getDay()+6)%7;
-  const _tplArr=Array.isArray(routine.weekdays[_dow])?routine.weekdays[_dow]:[];
-  const _slotI=_cycleInfoForDate(key);
-  const _skItems=_slotI?skillTemplates.filter(t=>t.cycleSlot===_slotI.key):[];
+  const _skItems=(typeof templatesForDate==='function')?templatesForDate(key):[];
   const _spCnt=_skItems.reduce((s,t)=>s+t.exercises.length,0);
-  const _tplDoneCnt=_tplArr.filter((_,i)=>!!tplDone[key+'__tpl__'+i]).length;
   const _skDoneCnt=_skItems.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[key+'__sport__'+t.id+'__'+ei]).length,0);
-  const done=realArr.filter(x=>x.done).length+_tplDoneCnt+_skDoneCnt;
-  const total=realArr.length+_tplArr.length+_spCnt;
+  const done=realArr.filter(x=>x.done).length+_skDoneCnt;
+  const total=realArr.length+_spCnt;
   const p=pct(done,total);
   const circ=107.0,off=circ-(p/100)*circ;
   const isMob=window.innerWidth<768;
@@ -489,14 +514,16 @@ function wcEditTask(key,id){
         <input id="wcEditName" value="${t.name.replace(/"/g,'&quot;')}" maxlength="300" style="background:var(--c2);border:1px solid var(--bd);border-radius:10px;color:var(--t1);font-size:14px;padding:10px 13px;flex:1">
       </div>
       <div class="btn-row">
-        <button class="del-btn" onclick="(function(){try{wcDelTask('${key}',${id});}catch(e){}var m=document.getElementById('wcEditModal');if(m)m.remove();})()">УДАЛИТЬ</button>
+        <button class="del-btn" onclick="(function(){try{wcDelTask('${key}',${id});}catch(e){}wcCloseEditModal();})()">УДАЛИТЬ</button>
         <button class="add-btn" onclick="wcEditSave('${key}',${id})">СОХРАНИТЬ</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  lockBodyScroll();
+  overlay.addEventListener('click',e=>{if(e.target===overlay)wcCloseEditModal();});
   setTimeout(()=>{const inp=document.getElementById('wcEditName');if(inp){inp.focus();inp.selectionStart=inp.selectionEnd=inp.value.length;}},80);
 }
+function wcCloseEditModal(){const m=document.getElementById('wcEditModal');if(m)m.remove();unlockBodyScroll();}
 function wcEditSave(key,id){
   const arr=tasks[key]||[];
   const t=arr.find(x=>x.id===id);
@@ -506,7 +533,7 @@ function wcEditSave(key,id){
   const emoji=document.getElementById('wcEditEmoji')?.value.trim();
   t.name=name;t.emoji=emoji||'';
   tasks[key]=arr;LS.s('tasks',tasks);repaintCard(key);
-  document.getElementById('wcEditModal')?.remove();
+  wcCloseEditModal();
 }
 
 // ══ HAB PROPOSE ════════════════════════════════════════

@@ -3,8 +3,7 @@
 
 // ── TODAY PAGE ──────────────────────────────────────────
 let todayRoutineSlot = 'morning';
-
-function dk2(d){ return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); } // формат совпадает с dk() в main.js
+const HIGHLIGHT_DELAY = 250; // задержка скролла+подсветки при переходе по уведомлению
 
 // ── Найти кнопку .nb по ключу страницы (по onclick, не по индексу) ──
 function findNavBtn(pageKey){
@@ -17,9 +16,10 @@ function findNavBtn(pageKey){
 }
 
 // ── Переход на конкретный слайд рутины с подсветкой пункта ─
-// slotKey: 'morning'=0, 'day'=1, 'evening'=2, 'week'=3, 'month'=4, '_annuals'=5, '_weekdays'=6
-const _rtSlideIndex = {morning:0, day:1, evening:2, week:3, month:4, '_annuals':5, '_weekdays':6};
-function navToRoutineSlide(slotKey, itemIdx){
+// slotKey: 'morning'/'day'/'evening'=0 (ежедневное), 'week'=1, 'month'=2, '_annuals'=3
+// realIdx для ежедневного пункта = индекс в routine.daily; id в слайде: rt-item-<slot>-<dow>-<realIdx>
+const _rtSlideIndex = {morning:0, day:0, evening:0, week:1, month:2, '_annuals':3};
+function navToRoutineSlide(slotKey, realIdx){
   const slideIdx = _rtSlideIndex[slotKey] !== undefined ? _rtSlideIndex[slotKey] : 0;
   // Сначала переключаем слайд
   if(typeof goRtSlide === 'function') goRtSlide(slideIdx);
@@ -27,9 +27,16 @@ function navToRoutineSlide(slotKey, itemIdx){
   const btn = findNavBtn('routine');
   goPage('routine', btn);
   // Подсвечиваем конкретный пункт если передан индекс
-  if(itemIdx === undefined || itemIdx === null) return;
+  if(realIdx === undefined || realIdx === null) return;
   setTimeout(()=>{
-    const el = document.getElementById('rt-item-' + slotKey + '-' + itemIdx);
+    // Для ежедневных слотов id содержит день недели сегодня + realIdx
+    let el=null;
+    if(['morning','day','evening'].includes(slotKey)){
+      const dow=(new Date().getDay()+6)%7;
+      el=document.getElementById('rt-item-' + slotKey + '-' + dow + '-' + realIdx);
+    }else{
+      el=document.getElementById('rt-item-' + slotKey + '-' + realIdx);
+    }
     if(el){
       el.scrollIntoView({behavior:'smooth', block:'center'});
       el.classList.add('today-highlight-anim');
@@ -122,12 +129,10 @@ function todayFadeOut(el, cb){
 
 function renderTodayPage(){
   const now = new Date();
-  const dayNames = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
-  const monthNames = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
   const heroDate = document.getElementById('todayHeroDate');
   const heroDay  = document.getElementById('todayHeroDay');
-  if(heroDate) heroDate.textContent = now.getDate() + ' ' + monthNames[now.getMonth()];
-  if(heroDay)  heroDay.textContent  = dayNames[now.getDay()];
+  if(heroDate) heroDate.textContent = displayDate(now,{noYear:true});
+  if(heroDay)  heroDay.textContent  = dayFullName(now);
   renderTodayNotifs(now);
   renderTodayHW(now);
   renderTodayTasks(now);
@@ -136,7 +141,6 @@ function renderTodayPage(){
   renderTodayDeadlineGoals();
   renderTodayRoutine(now);
   renderTodayWeekRoutine(now);
-  renderTodayMonthRoutine(now);
   renderTodayYearRoutine(now);
 }
 
@@ -170,18 +174,12 @@ function renderTodayNotifs(now){
   }
 }
 
+const NOTIF_DEST_PREFIX=[['goal_','goals'],['mg_','goals'],['hw_','memo'],['watch_','interests'],['bd_','health'],['annual_','routine']];
+const NOTIF_DEST_EXACT={week_mon:'routine',week_sun:'routine',week_sat:'routine',month_finance:'finance',month_routine:'routine'};
 function getNotifDest(id){
   if(!id) return 'week';
-  if(id.startsWith('goal_'))   return 'goals';
-  if(id.startsWith('mg_'))     return 'goals';
-  if(id.startsWith('hw_'))     return 'memo';
-  if(id.startsWith('watch_'))  return 'interests';
-  if(id.startsWith('bd_'))     return 'health';
-  if(id.startsWith('annual_')) return 'routine';
-  if(id.startsWith('patch_'))  return 'memo';
-  if(id==='week_mon'||id==='week_sun'||id==='week_sat') return 'routine';
-  if(id==='month_finance') return 'finance';
-  if(id==='month_routine') return 'routine';
+  for(const [p,dest] of NOTIF_DEST_PREFIX){ if(id.startsWith(p)) return dest; }
+  if(Object.prototype.hasOwnProperty.call(NOTIF_DEST_EXACT,id)) return NOTIF_DEST_EXACT[id];
   return 'week';
 }
 
@@ -190,7 +188,7 @@ function navToNotif(notifId, dest){
   if(dest === 'routine'){
     let slotKey = 'morning';
     if(notifId === 'month_routine')                                                     slotKey = 'month';
-    else if(notifId === 'week_mon' || notifId === 'week_sun' || notifId === 'week_sat') slotKey = '_weekdays';
+    else if(notifId === 'week_mon' || notifId === 'week_sun' || notifId === 'week_sat') slotKey = 'morning';
     else if(notifId && notifId.startsWith('annual_'))                                   slotKey = '_annuals';
     else if(notifId && notifId.startsWith('year'))                                      slotKey = '_annuals';
     navToRoutineSlide(slotKey);
@@ -201,7 +199,7 @@ function navToNotif(notifId, dest){
   setTimeout(()=>{
     const el = findNotifElement(notifId, dest);
     if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('today-highlight-anim'); setTimeout(()=>el.classList.remove('today-highlight-anim'), 1600); }
-  }, 250);
+  }, HIGHLIGHT_DELAY);
 }
 
 function findNotifElement(notifId, dest){
@@ -211,7 +209,6 @@ function findNotifElement(notifId, dest){
   if(notifId&&notifId.startsWith('watch_')){const id=notifId.replace('watch_','');return document.getElementById('watch-item-'+id);}
   if(notifId&&notifId.startsWith('bd_')){const id=notifId.replace('bd_','');return document.getElementById('bd-item-'+id);}
   if(notifId&&notifId.startsWith('annual_')){const id=notifId.replace('annual_','');return document.getElementById('annual-item-'+id);}
-  if(notifId&&notifId.startsWith('patch_')){const id=notifId.replace('patch_','');return document.getElementById('patch-item-'+id);}
   if(notifId==='week_mon'||notifId==='week_sun'||notifId==='week_sat') return document.querySelector('.month-strip-inner')||document.querySelector('.week-nav');
   if(notifId==='month_finance') return document.getElementById('finBalanceVal');
   if(notifId==='month_routine') return document.querySelector('.routine-swipe-wrap');
@@ -243,7 +240,7 @@ function renderTodayHW(now){
       <div style="flex:1;min-width:0">
         <div style="font-size:14px">${h.subj||''}</div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:2px">${h.task||''}</div>
-        ${h.date?`<div style="font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:1px">до ${h.date}</div>`:''}
+        ${h.date?`<div style="font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:1px">до ${displayDate(h.date)}</div>`:''}
       </div>
       ${arrowBtn('memo','hw-item-'+h.id,'homework')}
     </div>`).join('');
@@ -286,22 +283,17 @@ function toggleTodayTplView(){
 }
 
 // ── Состояние сворачивания секций в шаблонном виде ──────
-let _tplSections = {weekdays: false, skills: false, habits: false};
+let _tplSections = {skills: false, habits: false};
 function _toggleTplSection(key){ _tplSections[key] = !_tplSections[key]; renderTodayTplList(); }
 
 function renderTodayTplList(){
   const container = document.getElementById('today-tpl-list');
   if(!container) return;
   const now = new Date();
-  const dow = (now.getDay()+6)%7;
-  const key = dk2(now);
+  const key = dk(now);
 
-  const tplArr = (typeof routine !== 'undefined' && routine.weekdays && typeof routine.weekdays === 'object' && Array.isArray(routine.weekdays[dow]))
-    ? routine.weekdays[dow] : [];
-
-  const _daySlot = (typeof _cycleInfoForDate === 'function') ? _cycleInfoForDate(key) : null;
-  const skillsItems = (_daySlot && typeof skillTemplates !== 'undefined')
-    ? skillTemplates.filter(t => t.cycleSlot === _daySlot.key) : [];
+  const skillsItems = (typeof templatesForDate === 'function' && typeof skillTemplates !== 'undefined')
+    ? templatesForDate(key) : [];
 
   const activeHabits = (typeof habits !== 'undefined' && typeof getComp === 'function')
     ? habits.filter(h => getComp()[h.id]) : [];
@@ -320,30 +312,6 @@ function renderTodayTplList(){
   }
 
   let html = '<div style="background:var(--c1);display:flex;flex-direction:column;border-radius:12px;border:1px solid var(--bd);overflow:hidden">';
-
-  // ── ДНИ НЕД. — показываем всегда ──
-  {
-    const wdDone = tplArr.filter((_,i) => !!(typeof tplDone!=='undefined' && tplDone[key+'__tpl__'+i])).length;
-    html += tplSectionHeader('дни нед.', 'weekdays', _tplSections.weekdays, tplArr.length - wdDone);
-    if(_tplSections.weekdays){
-      html += `<div style="display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-bottom:1px solid var(--bd)">`;
-      if(!tplArr.length){
-        html += `<div style="font-family:var(--mono);font-size:11px;color:var(--t3);padding:6px 0;text-align:center">нет задач для этого дня — добавь в рутина → дни нед.</div>`;
-      } else {
-        tplArr.forEach((item, i) => {
-          const name = item.name || item;
-          const tplKey = key + '__tpl__' + i;
-          const isDone = !!(typeof tplDone !== 'undefined' && tplDone[tplKey]);
-          html += `<div class="today-item ${isDone?'done':''}" id="today-tpl-item-${i}" onclick="toggleTodayTplItem('${tplKey}',this)">
-            <div class="chk">${isDone?'✓':''}</div>
-            <div class="item-name" style="flex:1;min-width:0">${name}</div>
-            <button onclick="event.stopPropagation();navToWeekTplItem('dc-tpl-wd-${i}')" style="${arrowStyle}" ${arrowHover}>→</button>
-          </div>`;
-        });
-      }
-      html += '</div>';
-    }
-  }
 
   if(skillsItems.length > 0){
     const totalEx = skillsItems.reduce((s,t)=>s+(t.exercises||[]).length,0);
@@ -434,7 +402,7 @@ function toggleTodayTplItem(tplKey, el){
 
 
 // состояние сворачивания секций
-let _taskSections = {today: false, planned: false, undone: false};
+let _taskSections = {permanent: false, today: false, planned: false, undone: false};
 
 function _toggleTaskSection(key){
   _taskSections[key] = !_taskSections[key];
@@ -448,38 +416,35 @@ function renderTodayTasks(now){
   const countEl = document.getElementById('today-tasks-count');
   if(!list) return;
 
-  const todayKey = dk2(now);
-  const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  const monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  if(typeof rolloverPermanentTasks==='function')rolloverPermanentTasks();
+  const todayKey = dk(now);
 
   // Диапазон: прошлая неделя (7 дней назад) ... следующая неделя (7 дней вперёд)
   const allKeys = [];
   for(let d = -7; d <= 7; d++){
     const dt = new Date(now);
     dt.setDate(now.getDate() + d);
-    allKeys.push({ key: dk2(dt), date: dt, offset: d });
+    allKeys.push({ key: dk(dt), date: dt, offset: d });
   }
 
   // Задачи сегодня (без привычек — они не считаются)
   const todayTasks = (typeof tasks !== 'undefined' && tasks[todayKey]) ? tasks[todayKey] : [];
   const realTodayTasks = todayTasks.filter(t => !t._isHabit);
 
-  // ДНИ НЕД. для сегодня
+  // ЕЖЕДНЕВНАЯ РУТИНА для сегодня
   const _dow = (now.getDay()+6)%7;
-  const tplArr = (typeof routine !== 'undefined' && routine.weekdays && typeof routine.weekdays === 'object' && Array.isArray(routine.weekdays[_dow]))
-    ? routine.weekdays[_dow] : [];
-  const _tplDoneCount = tplArr.filter((_, i) => !!(typeof tplDone !== 'undefined' && tplDone[todayKey+'__tpl__'+i])).length;
+  const _rtItems = (typeof dailyItemsForDow === 'function') ? dailyItemsForDow(_dow) : [];
+  const _rtDoneCount = (typeof dailyDoneCount === 'function') ? dailyDoneCount(_dow, todayKey) : 0;
 
   // Навыки для сегодня
-  const _daySlotInfo = (typeof _cycleInfoForDate === 'function') ? _cycleInfoForDate(todayKey) : null;
-  const _skillsTplItems = (_daySlotInfo && typeof skillTemplates !== 'undefined')
-    ? skillTemplates.filter(t => t.cycleSlot === _daySlotInfo.key) : [];
+  const _skillsTplItems = (typeof templatesForDate === 'function' && typeof skillTemplates !== 'undefined')
+    ? templatesForDate(todayKey) : [];
   const _skillsCount = _skillsTplItems.reduce((s, t) => s + (t.exercises||[]).length, 0);
   const _skillsDoneCount = _skillsTplItems.reduce((s, t) =>
     s + (t.exercises||[]).filter((_, ei) => !!(typeof tplDone !== 'undefined' && tplDone[todayKey+'__sport__'+t.id+'__'+ei])).length, 0);
 
-  const totalToday = realTodayTasks.length + tplArr.length + _skillsCount;
-  const doneToday  = realTodayTasks.filter(t => t.done).length + _tplDoneCount + _skillsDoneCount;
+  const totalToday = realTodayTasks.length + _rtItems.length + _skillsCount;
+  const doneToday  = realTodayTasks.filter(t => t.done).length + _rtDoneCount + _skillsDoneCount;
   const pct = totalToday ? Math.round(doneToday / totalToday * 100) : 0;
   const circumference = 188.5;
   if(ring) ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
@@ -525,6 +490,23 @@ function renderTodayTasks(now){
 
   let html = '<div style="background:var(--c1);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden">';
 
+  // ── ПОСТОЯННЫЕ (плавающий недельный бэклог) ──
+  const permTasks = (typeof permanentTasks!=='undefined') ? permanentTasks : [];
+  if(permTasks.length){
+    html += sectionHeader('постоянные', 'permanent', _taskSections.permanent, permTasks.filter(t=>!t.done).length, false);
+    if(_taskSections.permanent){
+      html += `<div style="${INNER};display:flex;flex-direction:column;gap:6px;padding-top:8px;padding-bottom:8px">`;
+      html += permTasks.map(t => `
+        <div class="today-item perm-task ${t.done?'done':''}" id="today-perm-${t.id}" onclick="wcTogglePermanent('${t.id}')">
+          <div class="chk">${t.done?'✓':''}</div>
+          <div style="font-size:15px">📌</div>
+          <div class="item-name" style="flex:1;min-width:0">${t.name}</div>
+          <button onclick="event.stopPropagation();wcDelPermanent('${t.id}')" title="Удалить" style="flex-shrink:0;width:30px;height:30px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--t3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseleave="this.style.color='var(--t3)';this.style.borderColor='var(--bd)'">✕</button>
+        </div>`).join('');
+      html += '</div>';
+    }
+  }
+
   // ── СЕГОДНЯ ──
   html += sectionHeader('сегодня', 'today', _taskSections.today, realTodayTasks.filter(t=>!t.done).length, false);
   if(_taskSections.today){
@@ -546,7 +528,7 @@ function renderTodayTasks(now){
     } else {
       plannedDays.forEach(({key, date}) => {
         const dayTasks = (typeof tasks!=='undefined'&&tasks[key])?tasks[key]:[];
-        const label = dayNames[date.getDay()] + ' ' + date.getDate() + ' ' + monthNames[date.getMonth()];
+        const label = displayDate(date,{weekday:true,noYear:true});
         html += `<div style="font-family:var(--mono);font-size:9px;color:var(--a);letter-spacing:1px;text-transform:uppercase;padding:6px 0 4px;opacity:.7">${label}</div>`;
         html += dayTasks.map(t => taskItem(t, key, true)).join('');
       });
@@ -565,7 +547,7 @@ function renderTodayTasks(now){
       undoneDays.forEach(({key, date}) => {
         const dayTasks = ((typeof tasks!=='undefined'&&tasks[key])?tasks[key]:[]).filter(t=>!t.done);
         if(!dayTasks.length) return;
-        const label = dayNames[date.getDay()] + ' ' + date.getDate() + ' ' + monthNames[date.getMonth()];
+        const label = displayDate(date,{weekday:true,noYear:true});
         html += `<div style="font-family:var(--mono);font-size:9px;color:var(--red,#ef4444);letter-spacing:1px;text-transform:uppercase;padding:6px 0 4px;opacity:.8">${label}</div>`;
         html += dayTasks.map(t => {
           const carryBtn = `<button onclick="event.stopPropagation();carryTaskToToday('${key}','${t.id}')" title="Перенести на сегодня" style="flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.background='var(--a)';this.style.color='#000'" onmouseleave="this.style.background='var(--c2)';this.style.color='var(--a)'">↑</button>`;
@@ -609,7 +591,7 @@ function carryTaskToToday(oldKey, taskId){
   if(!tasks[oldKey].length) delete tasks[oldKey];
 
   // Добавляем в сегодня если ещё нет
-  const todayKey = dk2(new Date());
+  const todayKey = dk(new Date());
   if(!tasks[todayKey]) tasks[todayKey] = [];
   const alreadyThere = tasks[todayKey].some(x => x.name === t.name);
   if(!alreadyThere){
@@ -750,18 +732,21 @@ function renderTodayRoutine(now){ renderTodayRoutineSlot(now,todayRoutineSlot); 
 function renderTodayRoutineSlot(now, slot){
   const container=document.getElementById('today-routine-items');
   if(!container) return;
-  const key=dk2(now);
+  const key=dk(now);
   if(!routineLog[key]) routineLog[key]={morning:{},day:{},evening:{}};
   const log=routineLog[key];
-  const items=(typeof routine!=='undefined'&&routine[slot])?routine[slot]:[];
+  const dow=(now.getDay()+6)%7;
+  const items=(typeof dailyItemsForSlot==='function')?dailyItemsForSlot(slot,dow):[];
   if(!items.length){ container.innerHTML=`<div style="font-family:var(--mono);font-size:11px;color:var(--t2);padding:14px;text-align:center;letter-spacing:1px">— нет пунктов для «${slot==='morning'?'утра':slot==='day'?'дня':'вечера'}» —</div>`; return; }
+  const arrowStyle='flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s';
+  const arrowHover="onmouseenter=\"this.style.background='var(--a)';this.style.color='#000'\" onmouseleave=\"this.style.background='var(--c2)';this.style.color='var(--a)'\"";
   container.innerHTML=items.map((item,i)=>{
-    const name=item.name||item;
-    const done=!!(log[slot]&&log[slot][name]);
-    return `<div class="today-rt-item ${done?'done':''}" id="today-rt-${slot}-${i}" onclick="toggleTodayRoutine('${key}','${slot}',${i},this)">
+    const realIdx=(routine.daily||[]).indexOf(item);
+    const done=!!(log[slot]&&log[slot][item.name]);
+    return `<div class="today-rt-item ${done?'done':''}" id="today-rt-${slot}-${i}" onclick="toggleTodayRoutine('${key}','${slot}',${realIdx},this)">
       <div class="rt-chk">${done?'✓':''}</div>
-      <div class="rt-name" style="flex:1">${name}</div>
-      ${arrowBtn('routine','rt-item-'+slot+'-'+i)}
+      <div class="rt-name" style="flex:1">${item.name}</div>
+      <button onclick="event.stopPropagation();navToRoutineSlide('${slot}',${realIdx})" style="${arrowStyle}" ${arrowHover}>→</button>
     </div>`;
   }).join('');
 }
@@ -773,13 +758,12 @@ function switchTodayRoutine(el, slot){
   renderTodayRoutineSlot(new Date(),slot);
 }
 
-function toggleTodayRoutine(key, slot, idx, el){
+function toggleTodayRoutine(key, slot, realIdx, el){
   if(!routineLog[key]) routineLog[key]={morning:{},day:{},evening:{}};
   if(!routineLog[key][slot]) routineLog[key][slot]={};
-  // Используем имя пункта как ключ — так же как основная страница рутины
-  const name = (typeof routine!=='undefined'&&routine[slot]&&routine[slot][idx])
-    ? (routine[slot][idx].name || routine[slot][idx])
-    : String(idx);
+  // Имя пункта как ключ — как в основной странице рутины
+  const item=(typeof routine!=='undefined'&&routine.daily&&routine.daily[realIdx])?routine.daily[realIdx]:null;
+  const name = item ? item.name : String(realIdx);
   const nowDone=!routineLog[key][slot][name];
   routineLog[key][slot][name]=nowDone;
   if(!nowDone) delete routineLog[key][slot][name];
@@ -821,20 +805,6 @@ function renderTodayWeekRoutine(now){
   _renderWMY('week',wItems,wl,'today-week-routine-list');
 }
 
-function renderTodayMonthRoutine(now){
-  const block=document.getElementById('today-month-routine-block');
-  if(!block) return;
-  const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  const showMonth=now.getDate()===1||now.getDate()>=(lastDay-2);
-  if(!showMonth){ block.style.display='none'; return; }
-  const notifs=(typeof collectNotifications==='function')?collectNotifications():[];
-  const hasNotif=notifs.some(n=>n.id==='month_routine');
-  const mItems=(typeof routine!=='undefined'&&routine.month)?routine.month:[];
-  if(!hasNotif||!mItems.length){ block.style.display='none'; return; }
-  block.style.display='block';
-  const ml=(typeof getBlockLog==='function')?getBlockLog('month'):{};
-  _renderWMY('month',mItems,ml,'today-month-routine-list');
-}
 
 function renderTodayYearRoutine(now){
   const block=document.getElementById('today-year-routine-block');

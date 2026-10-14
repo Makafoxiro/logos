@@ -1,8 +1,9 @@
 // ═══ MODULE: skills.js ═══
-// ══ СКОЛЬЗЯЩИЙ ЦИКЛ ══════════════════════════════════════
-// Паттерн: A-1-B-2-C-3-D-4 (буква физ, цифра умст, чередуются)
-// Если букв/цифр больше 4 — цикл расширяется: A-1-B-2-C-3-D-4-E-1-A-2...
-// Отдых назначается вручную через cycleOverrides
+// ══ РАСПИСАНИЕ ПО ДНЯМ НЕДЕЛИ ══════════════════════════════
+// Шаблоны привязываются к дням недели (t.weekDays, 0=Пн..6=Вс), физ. и умств.
+// могут накладываться на один день. Слот (A/B/C/D, 1/2/3...) — метка/цвет шаблона.
+// Точечные правки конкретных дат — cycleOverrides ({dk: 'rest'|'A'|...}).
+// Тяж/лёгк недели — от чётности ISO-недели года (без даты отсчёта).
 
 const CYCLE_WORKOUTS = [
   {key:'A', name:'Грудь + Трицепс + Пресс', color:'#378ADD', bg:'rgba(55,138,221,0.12)', exs:['Отжимания с рюкзаком (грудь) — 3–4×8–12','Отжимания узким хватом (трицепс) — 3×10–15','Скручивания на полу (пресс) — 2–3×15–20']},
@@ -10,10 +11,7 @@ const CYCLE_WORKOUTS = [
   {key:'C', name:'Плечи + Предплечья + Пресс', color:'#7F77DD', bg:'rgba(127,119,221,0.12)', exs:['Разведения в стороны (бутылки) — 3×15–20','Сгибание/разгибание кистей — 3×15–20','Планка — 2–3×20–30 сек']},
   {key:'D', name:'Ноги лёгкие + Пресс', color:'#BA7517', bg:'rgba(186,117,23,0.12)', exs:['Приседания с рюкзаком — 3–4×12–15','Ягодичный мост — 3×15–20','Подъёмы на носки — 3×15–20','Вакуум живота — 3×5–10 сек']},
 ];
-const CYCLE_MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-let cycleStartDate = LS.g('cycleStartDate', '2026-04-07');
-let cycleStartSlot = LS.g('cycleStartSlot', 0);
 let cycleFirstWeekHeavy = LS.g('cycleFirstWeekHeavy', true);
 let _cycleView = 'list';
 let _cycleCalMonth = null;
@@ -22,6 +20,45 @@ let _tempCycleLetters = [];
 let _tempCycleDigits = [];
 // Ручные переопределения: {dk: 'rest'|'A'|'B'|'1'|...}
 let cycleOverrides = LS.g('cycleOverrides', {});
+
+// ── Одноровная миграция из старого скользящего цикла ──────
+// Проставляем weekDays шаблонам, у которых есть слот, но не проставлены дни недели.
+(function _migrateWeekDaysFromCycle(){
+  if(!skillTemplates||!skillTemplates.length)return;
+  if(LS.g('weekDaysMigrated',false))return;
+  const missing=skillTemplates.filter(t=>t.cycleSlot&&(!Array.isArray(t.weekDays)||!t.weekDays.length));
+  if(missing.length){
+    const startStr=LS.g('cycleStartDate','2026-04-07');
+    const startSlot=LS.g('cycleStartSlot',0);
+    const letters=['A','B','C','D'],digits=['1','2','3','4'];
+    skillTemplates.forEach(t=>{
+      if(!t.cycleSlot)return;
+      if(/^[A-Z]$/.test(t.cycleSlot)&&!letters.includes(t.cycleSlot))letters.push(t.cycleSlot);
+      if(/^\d+$/.test(t.cycleSlot)&&!digits.includes(t.cycleSlot))digits.push(t.cycleSlot);
+    });
+    letters.sort();digits.sort((a,b)=>Number(a)-Number(b));
+    const maxLen=Math.max(letters.length,digits.length);
+    const pattern=[];
+    for(let i=0;i<maxLen;i++){pattern.push(letters[i%letters.length]);pattern.push(digits[i%digits.length]);}
+    const [sy,sm,sd]=startStr.split('-').map(Number);
+    const start=new Date(sy,sm-1,sd);
+    const today=new Date();
+    for(let i=0;i<14;i++){
+      const d=new Date(today);d.setDate(today.getDate()+i);
+      const diff=Math.round((d-start)/86400000);
+      const idx=((startSlot+diff)%pattern.length+pattern.length)%pattern.length;
+      const key=pattern[idx];
+      const dow=(d.getDay()+6)%7;
+      missing.forEach(t=>{
+        if(t.cycleSlot!==key)return;
+        if(!Array.isArray(t.weekDays))t.weekDays=[];
+        if(!t.weekDays.includes(dow))t.weekDays.push(dow);
+      });
+    }
+    LS.s('sportTemplates',skillTemplates);
+  }
+  LS.s('weekDaysMigrated',true);
+})();
 
 function _getCycleSlots(){
   const letters=['A','B','C','D'];
@@ -37,30 +74,37 @@ function _getCycleSlots(){
   // Сортируем чтобы порядок был всегда алфавитный/числовой
   letters.sort();
   digits.sort((a,b)=>Number(a)-Number(b));
-  // Паттерн A-1-B-2-C-3-D-4-E-1-A-2...
-  const maxLen=Math.max(letters.length,digits.length);
-  const pattern=[];
-  for(let i=0;i<maxLen;i++){pattern.push(letters[i%letters.length]);pattern.push(digits[i%digits.length]);}
-  return {letters,digits,pattern};
+  return {letters,digits};
 }
 
-
-function _cycleDayIndex(dkStr){
-  const [sy,sm,sd]=cycleStartDate.split('-').map(Number);
-  const start=new Date(sy,sm-1,sd);
+// ── ДЕНЬ НЕДЕЛИ → ШАБЛОНЫ ────────────────────────────────
+// День недели даты в формате dk(): 0=Пн..6=Вс
+function _dowForDate(dkStr){
   const parts=dkStr.split('-').map(Number);
   const d=new Date(parts[0],parts[1],parts[2]);
-  const diff=Math.round((d-start)/86400000);
-  const {pattern}=_getCycleSlots();
-  return ((cycleStartSlot+diff)%pattern.length+pattern.length)%pattern.length;
+  return (d.getDay()+6)%7;
 }
-
+// Шаблоны, привязанные к дню недели даты (без учёта override)
+function _tplsForWeekday(dow){
+  return (skillTemplates||[]).filter(t=>Array.isArray(t.weekDays)&&t.weekDays.includes(dow));
+}
+// Слоты дня: override > слоты привязанных шаблонов
+function _slotsForDate(dkStr){
+  if(cycleOverrides[dkStr]==='rest')return [];
+  if(cycleOverrides[dkStr])return [cycleOverrides[dkStr]];
+  return [...new Set(_tplsForWeekday(_dowForDate(dkStr)).map(t=>t.cycleSlot).filter(Boolean))];
+}
+// Шаблоны дня с учётом override и тяж/лёгк недели — основной источник для рендера
+function templatesForDate(dkStr){
+  if(cycleOverrides[dkStr]==='rest')return [];
+  let list;
+  if(cycleOverrides[dkStr])list=(skillTemplates||[]).filter(t=>t.cycleSlot===cycleOverrides[dkStr]);
+  else list=_tplsForWeekday(_dowForDate(dkStr));
+  return _applyIntensity(list,dkStr);
+}
 function _cycleInfoForDate(dkStr){
-  if(cycleOverrides[dkStr]==='rest')return null;
-  if(cycleOverrides[dkStr])return _slotMeta(cycleOverrides[dkStr]);
-  const {pattern}=_getCycleSlots();
-  const idx=_cycleDayIndex(dkStr);
-  return _slotMeta(pattern[idx]);
+  const slots=_slotsForDate(dkStr);
+  return slots.length?_slotMeta(slots[0]):null;
 }
 
 function _slotMeta(slotKey){
@@ -83,18 +127,36 @@ function _slotMeta(slotKey){
   return null;
 }
 
+// Тяж/лёгк недели: ISO-номер недели в году, чётность + флаг cycleFirstWeekHeavy
+function _isoWeekNum(d){
+  const t=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const dayNum=(t.getDay()+6)%7;          // Пн=0..Вс=6
+  t.setDate(t.getDate()-dayNum+3);         // четверг этой ISO-недели
+  const firstThu=new Date(t.getFullYear(),0,4);
+  const fDayNum=(firstThu.getDay()+6)%7;
+  firstThu.setDate(firstThu.getDate()-fDayNum+3);
+  return 1+Math.round((t-firstThu)/(7*24*60*60*1000));
+}
 function _getWeekIntensity(dateStr){
-  // cycleStartDate stored as YYYY-MM-DD (1-indexed month), subtract 1
-  const [sy,sm,sd]=cycleStartDate.split('-').map(Number);
-  const start=new Date(sy,sm-1,sd);
-  // dateStr comes from dk() which uses getMonth() (0-indexed), use as-is
   const parts=dateStr.split('-').map(Number);
   const d=new Date(parts[0],parts[1],parts[2]);
-  // Normalize both to Monday so all days Mon-Sun share the same weekNum
-  const toMonday=(dt)=>{const day=dt.getDay();const m=new Date(dt);m.setDate(dt.getDate()-(day===0?6:day-1));return m;};
-  const weekNum=Math.round((toMonday(d)-toMonday(start))/(7*24*60*60*1000));
-  const isEven=weekNum%2===0;
+  const isEven=_isoWeekNum(d)%2===0;
   return (isEven===cycleFirstWeekHeavy)?'heavy':'light';
+}
+
+// Применяет к списку шаблонов упражнения текущей недели (тяж/лёгк)
+function _applyIntensity(tpls,dateStr){
+  if(!tpls||!tpls.length)return [];
+  const wType=_getWeekIntensity(dateStr); // 'heavy' | 'light'
+  return tpls.map(t=>{
+    // Новый формат: один шаблон с exercisesHeavy+exercisesLight
+    if(t.exercisesHeavy&&t.exercisesHeavy.length&&t.exercisesLight&&t.exercisesLight.length){
+      const exs=wType==='heavy'?t.exercisesHeavy:t.exercisesLight;
+      return {...t,exercises:exs};
+    }
+    // Шаблон без пары упражнений (старый/неполный формат) — выводим без фильтрации по weekIntensity
+    return t;
+  });
 }
 
 function _intensityBadge(dateStr,slotType){
@@ -134,58 +196,18 @@ function _slotHasIntensityPair(slotKey){
   // Старый формат: два отдельных шаблона
   return tpls.some(t=>t.weekIntensity==='heavy')&&tpls.some(t=>t.weekIntensity==='light');
 }
-// Возвращает шаблоны для слота с учётом текущей недели (тяж/лёгк)
-function _getVisibleTplsForSlot(slotKey, dateStr){
-  const all=skillTemplates.filter(t=>t.cycleSlot===slotKey);
-  const wType=_getWeekIntensity(dateStr); // 'heavy' | 'light'
-  // Новый формат: один шаблон с exercisesHeavy+exercisesLight
-  const newFmt=all.find(t=>t.exercisesHeavy&&t.exercisesHeavy.length&&t.exercisesLight&&t.exercisesLight.length);
-  if(newFmt){
-    const exs=wType==='heavy'?newFmt.exercisesHeavy:newFmt.exercisesLight;
-    return [{...newFmt,exercises:exs}];
-  }
-  // Старый формат: два отдельных шаблона
-  if(_slotHasIntensityPair(slotKey)){
-    const matched=all.filter(t=>t.weekIntensity===wType);
-    return matched.length?matched:all.filter(t=>!t.weekIntensity||t.weekIntensity==='none');
-  }
-  return all;
-}
-
-function syncWeekDaysFromCycle(){
-  if(!skillTemplates||!skillTemplates.length)return;
-  // Сброс weekDays у всех навыков у которых есть cycleSlot
-  skillTemplates.forEach(t=>{if(t.cycleSlot)t.weekDays=[];});
-  // Проходим по ближайшим 14 дням (2 недели) и назначаем дни по слоту
-  const today=new Date();
-  for(let i=0;i<14;i++){
-    const d=new Date(today);d.setDate(today.getDate()+i);
-    const ds=dk(d);
-    const dow=(d.getDay()+6)%7; // 0=Пн...6=Вс
-    const w=_cycleInfoForDate(ds);
-    if(!w)continue;
-    skillTemplates.forEach(t=>{
-      if(!t.cycleSlot||t.cycleSlot!==w.key)return;
-      if(!Array.isArray(t.weekDays))t.weekDays=[];
-      if(!t.weekDays.includes(dow))t.weekDays.push(dow);
-    });
-  }
-  LS.s('sportTemplates',skillTemplates);
-}
 
 function cycleResetToday(){
-  const n=new Date();
-  cycleStartDate=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
-  cycleStartSlot=0;
-  LS.s('cycleStartDate',cycleStartDate);LS.s('cycleStartSlot',cycleStartSlot);
-  syncWeekDaysFromCycle();
-  renderCycleBlock();renderSkills();flash('Цикл сброшен — сегодня слот A');
+  cycleOverrides={};
+  LS.s('cycleOverrides',cycleOverrides);
+  renderCycleBlock();renderSkills();
+  if(_cycleView==='cal')renderCycleCal();
+  flash('Расписание сброшено к дням недели');
 }
 
 function cycleSetDayOverride(dkStr,val){
   if(val==='auto'){delete cycleOverrides[dkStr];}else{cycleOverrides[dkStr]=val;}
   LS.s('cycleOverrides',cycleOverrides);
-  syncWeekDaysFromCycle();
   renderCycleBlock();renderSkills();
   if(_cycleView==='cal')renderCycleCal();
 }
@@ -194,7 +216,8 @@ function cycleOpenDayMenu(dkStr,e){
   e&&e.stopPropagation();
   const existing=document.getElementById('cycleDayMenu');
   if(existing){existing.remove();if(existing.dataset.dk===dkStr)return;}
-  const {pattern}=_getCycleSlots();
+  const {letters,digits}=_getCycleSlots();
+  const allSlots=[...letters,...digits];
   const current=cycleOverrides[dkStr]||'auto';
   const menu=document.createElement('div');
   menu.id='cycleDayMenu';menu.dataset.dk=dkStr;
@@ -203,7 +226,7 @@ function cycleOpenDayMenu(dkStr,e){
     const t=e.currentTarget?e.currentTarget.getBoundingClientRect():e.target.getBoundingClientRect();
     menu.style.top=(t.bottom+4)+'px';menu.style.left=Math.min(t.left,window.innerWidth-180)+'px';
   } else {menu.style.top='50%';menu.style.left='50%';menu.style.transform='translate(-50%,-50%)';}
-  const opts=[{val:'rest',label:'😌 отдых'},{val:'auto',label:'↺ авто'},...pattern.map(k=>{const m=_slotMeta(k);return{val:k,label:(m?m.key+' — '+m.name:k)};})];
+  const opts=[{val:'rest',label:'😌 отдых'},{val:'auto',label:'↺ авто (по дню недели)'},...allSlots.map(k=>{const m=_slotMeta(k);return{val:k,label:(m?m.key+' — '+m.name:k)};})];
   menu.innerHTML=opts.map(o=>{
     const isActive=o.val===current;
     return `<div onclick="cycleSetDayOverride('${dkStr}','${o.val}');document.getElementById('cycleDayMenu').remove()" style="padding:7px 10px;border-radius:7px;cursor:pointer;font-family:var(--mono);font-size:11px;background:${isActive?'var(--a2)':'transparent'};color:${isActive?'var(--a)':'var(--t2)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${o.label}</div>`;
@@ -228,22 +251,29 @@ function renderCycleCal(){
   const today=nowDK();
   if(!_cycleCalMonth){const n=new Date();_cycleCalMonth={y:n.getFullYear(),m:n.getMonth()};}
   const{y,m}=_cycleCalMonth;
-  document.getElementById('cycle-cal-title').textContent=CYCLE_MONTHS_RU[m]+' '+y;
+  document.getElementById('cycle-cal-title').textContent=displayDate(new Date(y,m,1),{monthOnly:true,upper:true});
   const firstDay=new Date(y,m,1);const lastDay=new Date(y,m+1,0);
   const startDow=(firstDay.getDay()+6)%7;
   const grid=document.getElementById('cycle-cal-grid');
   let cells='';
   for(let i=0;i<startDow;i++)cells+='<div></div>';
   for(let d=1;d<=lastDay.getDate();d++){
-    const ds=dk(new Date(y,m,d));const w=_cycleInfoForDate(ds);const isToday=ds===today;
+    const ds=dk(new Date(y,m,d));
+    const slots=_slotsForDate(ds);
+    const dayTpls=templatesForDate(ds);
+    const isToday=ds===today;
     const hasOverride=cycleOverrides[ds]!==undefined;
     const borderStyle=isToday?'1.5px solid var(--a)':'1px solid var(--bd)';
     const overrideDot=hasOverride?'<div style="position:absolute;top:2px;right:2px;width:4px;height:4px;border-radius:50%;background:var(--amber)"></div>':'';;
-    if(w){
-      const hasPair=_slotHasIntensityPair(w.key)&&w.type==='physical';
+    if(slots.length||dayTpls.length){
+      const firstMeta=slots.length?_slotMeta(slots[0]):null;
+      const hasPair=slots.some(k=>_slotHasIntensityPair(k)&&_slotMeta(k)&&_slotMeta(k).type==='physical');
       const intens=hasPair?_getWeekIntensity(ds):null;
       const calBadge=intens?`<div style="font-family:var(--mono);font-size:7px;font-weight:700;color:${intens==='heavy'?'#E86C3A':'#2dd4bf'};margin-top:1px">${intens==='heavy'?'▲тяж':'▽лёгк'}</div>`:'';
-      cells+=`<div onclick="cycleOpenDayMenu('${ds}',event)" style="position:relative;border-radius:6px;padding:4px 2px;border:${borderStyle};background:${w.bg};text-align:center;cursor:pointer">${overrideDot}<div style="font-family:var(--mono);font-size:8px;color:var(--t3)">${d}</div><div style="font-family:var(--mono);font-size:10px;color:${w.color};font-weight:500">${w.key}</div>${calBadge}</div>`;
+      const slotTxt=slots.length?slots.join(''):'•';
+      const slotColor=firstMeta?firstMeta.color:'var(--a)';
+      const bg=firstMeta?firstMeta.bg:(isToday?'var(--c3)':'var(--c2)');
+      cells+=`<div onclick="cycleOpenDayMenu('${ds}',event)" style="position:relative;border-radius:6px;padding:4px 2px;border:${borderStyle};background:${bg};text-align:center;cursor:pointer">${overrideDot}<div style="font-family:var(--mono);font-size:8px;color:var(--t3)">${d}</div><div style="font-family:var(--mono);font-size:10px;color:${slotColor};font-weight:500">${slotTxt}</div>${calBadge}</div>`;
     }else{
       cells+=`<div onclick="cycleOpenDayMenu('${ds}',event)" style="position:relative;border-radius:6px;padding:4px 2px;border:${borderStyle};background:${isToday?'var(--c3)':'var(--c2)'};text-align:center;cursor:pointer">${overrideDot}<div style="font-family:var(--mono);font-size:8px;color:var(--t3)">${d}</div><div style="font-size:8px;color:var(--t3)">—</div></div>`;
     }
@@ -251,48 +281,82 @@ function renderCycleCal(){
   grid.innerHTML=cells;
 }
 
+function _editBtnHtml(dkStr){
+  return `<button onclick="cycleOpenDayMenu('${dkStr}',event)" title="Изменить" style="background:var(--c2);border:1px solid var(--bd);border-radius:7px;color:var(--t3);font-size:13px;padding:4px 8px;cursor:pointer;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`;
+}
+
+// Бейджи слотов дня (буквы/цифры с цветом)
+function _slotBadgesHtml(slots){
+  return slots.map(k=>{
+    const m=_slotMeta(k);if(!m)return '';
+    return `<div style="font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 7px;border-radius:5px;border:1px solid ${m.color}44;background:${m.bg};color:${m.color};flex-shrink:0">${k}</div>`;
+  }).join('');
+}
+
 function renderCycleBlock(){
-  const today=nowDK();const todayW=_cycleInfoForDate(today);
+  const today=nowDK();
   const todayCard=document.getElementById('cycle-today-card');
   if(todayCard){
-    if(todayW){
-      const userTpls=_getVisibleTplsForSlot(todayW.key, today);
-      const _todayTpl=userTpls.length?userTpls[0]:null;
-      const _todayTplName=(_todayTpl&&_todayTpl.name)?_todayTpl.name:'';
-      if(!_todayTplName){todayCard.innerHTML='';}else{
-      const userExsHtml=userTpls.length
-        ?userTpls.map(tpl=>`<div style="margin-top:6px"><div style="font-family:var(--mono);font-size:8px;color:${todayW.color};letter-spacing:.5px;margin-bottom:3px">${tpl.name}</div>${tpl.exercises.map(e=>`<div style="display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--t2)"><span style="color:${todayW.color};margin-top:1px">▸</span>${e}</div>`).join('')}</div>`).join('')
-        :todayW.exs.map(e=>`<div style="display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--t2)"><span style="color:${todayW.color};margin-top:1px">▸</span>${e}</div>`).join('');
-      const typeLabel=todayW.type==='mental'?'УМСТВЕННАЯ':'ТРЕНИРОВКА';
-      const _todaySlotHasIntensity=_slotHasIntensityPair(todayW.key);
-      const intensityBadge=_todaySlotHasIntensity?_intensityBadge(today,todayW.type):'';
-      todayCard.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:36px;height:36px;border-radius:9px;background:${todayW.bg};border:1.5px solid ${todayW.color};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:var(--hd);font-size:22px;color:${todayW.color}">${todayW.key}</span></div><div style="flex:1"><div style="font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px;margin-bottom:2px">СЕГОДНЯ — ${typeLabel}</div><div style="display:flex;align-items:center;gap:6px"><div style="font-size:14px;font-weight:500">${_todayTplName}</div>${intensityBadge}</div></div><button onclick="cycleOpenDayMenu('${today}',event)" title="Изменить" style="background:var(--c2);border:1px solid var(--bd);border-radius:7px;color:var(--t3);font-size:13px;padding:4px 8px;cursor:pointer;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div><div style="display:flex;flex-direction:column;gap:4px">${userExsHtml}</div>`;
+    const dayTpls=templatesForDate(today);
+    const slots=_slotsForDate(today);
+    if(dayTpls.length||slots.length){
+      const firstMeta=slots.length?_slotMeta(slots[0]):null;
+      const color=firstMeta?firstMeta.color:'var(--a)';
+      const bg=firstMeta?firstMeta.bg:'var(--a2)';
+      const hasPair=slots.some(k=>_slotHasIntensityPair(k)&&_slotMeta(k)&&_slotMeta(k).type==='physical');
+      const intensityBadge=hasPair?_intensityBadge(today,'physical'):'';
+      const isMentalOnly=slots.length&&!slots.some(k=>_slotMeta(k)&&_slotMeta(k).type==='physical');
+      const typeLabel=dayTpls.length
+        ? (dayTpls.every(t=>(t.skillType||'physical')==='mental')?'УМСТВЕННАЯ':'ТРЕНИРОВКА')
+        : (isMentalOnly?'УМСТВЕННАЯ':'ТРЕНИРОВКА');
+      const iconKey=slots.length?slots.join(''):(isMentalOnly?'🧠':'💪');
+      // Тела: шаблоны дня (уже с упражнениями нужной интенсивности)
+      let bodyHtml='';
+      if(dayTpls.length){
+        bodyHtml=dayTpls.map(tpl=>{
+          const tm=tpl.cycleSlot?_slotMeta(tpl.cycleSlot):null;
+          const tc=tm?tm.color:color;
+          return `<div style="margin-top:6px"><div style="font-family:var(--mono);font-size:8px;color:${tc};letter-spacing:.5px;margin-bottom:3px">${tpl.cycleSlot?tpl.cycleSlot+' · ':''}${tpl.name}</div>${(tpl.exercises||[]).map(e=>`<div style="display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--t2)"><span style="color:${tc};margin-top:1px">▸</span>${e}</div>`).join('')}</div>`;
+        }).join('');
+      }else{
+        // Override на слот без своих шаблонов — пресетные упражнения
+        bodyHtml=slots.map(k=>{
+          const m=_slotMeta(k);
+          if(!m||!m.exs||!m.exs.length)return '';
+          return `<div style="margin-top:6px">${m.exs.map(e=>`<div style="display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--t2)"><span style="color:${m.color};margin-top:1px">▸</span>${e}</div>`).join('')}</div>`;
+        }).join('');
       }
+      todayCard.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:36px;height:36px;border-radius:9px;background:${bg};border:1.5px solid ${color};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:var(--hd);font-size:${iconKey.length>2?'14':'22'}px;color:${color}">${iconKey}</span></div><div style="flex:1"><div style="font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px;margin-bottom:2px">СЕГОДНЯ — ${typeLabel}</div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${_slotBadgesHtml(slots)}${intensityBadge}</div></div>${_editBtnHtml(today)}</div><div style="display:flex;flex-direction:column;gap:4px">${bodyHtml}</div>`;
     }else{
-      todayCard.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:9px;background:var(--c2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:18px">😌</span></div><div style="flex:1"><div style="font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px;margin-bottom:2px">СЕГОДНЯ</div><div style="font-size:14px;font-weight:500">День отдыха</div></div><button onclick="cycleOpenDayMenu('${today}',event)" title="Изменить" style="background:var(--c2);border:1px solid var(--bd);border-radius:7px;color:var(--t3);font-size:13px;padding:4px 8px;cursor:pointer;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div>`;
+      todayCard.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:9px;background:var(--c2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:18px">😌</span></div><div style="flex:1"><div style="font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px;margin-bottom:2px">СЕГОДНЯ</div><div style="font-size:14px;font-weight:500">День отдыха</div></div>${_editBtnHtml(today)}</div>`;
     }
   }
+  // ── Список: 7 строк Пн–Вс (ближайшее вхождение каждого дня) ──
   const listEl=document.getElementById('cycle-list');
   if(listEl){
+    const now=new Date();
+    const nowDow=(now.getDay()+6)%7;
     let rows='';
-    for(let i=0;i<14;i++){
-      const d=new Date();d.setDate(d.getDate()+i);
+    for(let i=0;i<7;i++){
+      const diff=(i-nowDow+7)%7;
+      const d=new Date(now);d.setDate(now.getDate()+diff);
       const ds=dk(d);
-      const dow=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][(d.getDay()+6)%7];
-      const dayNum=d.getDate()+' '+['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()];
-      const w=_cycleInfoForDate(ds);const isToday=i===0;
+      const dow=DAYS7[i];
+      const dayNum=displayDate(d,{noYear:true});
+      const slots=_slotsForDate(ds);
+      const dayTpls=templatesForDate(ds);
+      const isToday=diff===0;
       const hasOverride=cycleOverrides[ds]!==undefined;
       let rightHtml='';
-      if(w){
-        const userTpls=_getVisibleTplsForSlot(w.key, ds);
-        const namesStr=userTpls.length?userTpls.map(t=>t.name).join(', '):'';
-        const _daySlotHasIntensity=_slotHasIntensityPair(w.key);
-        const intBadge=_daySlotHasIntensity?_intensityBadge(ds,w.type):'';
-        rightHtml=`<div style="font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 7px;border-radius:5px;border:1px solid ${w.color}44;background:${w.bg};color:${w.color};flex-shrink:0">${w.key}</div>${intBadge}<div style="font-size:12px;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${namesStr}</div>`;
+      if(slots.length||dayTpls.length){
+        const hasPair=slots.some(k=>_slotHasIntensityPair(k)&&_slotMeta(k)&&_slotMeta(k).type==='physical');
+        const intBadge=hasPair?_intensityBadge(ds,'physical'):'';
+        const namesStr=dayTpls.length?dayTpls.map(t=>t.name).join(', '):'';
+        rightHtml=`${_slotBadgesHtml(slots)}${intBadge}<div style="font-size:12px;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${namesStr}</div>`;
       }else{
         rightHtml='<div style="font-size:11px;color:var(--t3);flex:1">отдых</div>';
       }
-      rows+=`<div onclick="cycleOpenDayMenu('${ds}',event)" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd)${i===13?';border-bottom:none':''};opacity:${isToday?'1':'0.75'};cursor:pointer"><div style="font-family:var(--mono);font-size:9px;color:${isToday?'var(--a)':'var(--t3)'};min-width:24px;text-align:right">${dow}</div><div style="font-family:var(--mono);font-size:9px;color:var(--t3);min-width:38px">${dayNum}</div>${rightHtml}${hasOverride?'<div style="width:5px;height:5px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>':''}</div>`;
+      rows+=`<div onclick="cycleOpenDayMenu('${ds}',event)" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd)${i===6?';border-bottom:none':''};opacity:${isToday?'1':'0.75'};cursor:pointer"><div style="font-family:var(--mono);font-size:9px;color:${isToday?'var(--a)':'var(--t3)'};min-width:24px;text-align:right">${dow}</div><div style="font-family:var(--mono);font-size:9px;color:var(--t3);min-width:38px">${dayNum}</div>${rightHtml}${hasOverride?'<div style="width:5px;height:5px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>':''}</div>`;
     }
     listEl.innerHTML=rows;
   }
@@ -300,7 +364,7 @@ function renderCycleBlock(){
 }
 
 // ══ SKILLS ══════════════════════════════════════════════
-const SKILLS_WDAYS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const SKILLS_WDAYS=DAYS7;
 let _skillsModalFiles=[];
 let _modalEx={heavy:'',light:'',none:''};
 
@@ -309,9 +373,6 @@ const CYCLE_SLOT_META=new Proxy({},{get(target,key){const m=_slotMeta(key);retur
 function skillsModalSelectSlot(s){
   _renderModalSlotButtons(s);
   document.getElementById('skillsModalCycleSlot').value=s;
-  const row=document.getElementById('skillsCycleSetupRow');
-  if(row)row.style.display=s?'block':'none';
-  if(s)renderSkillsCycleSetup(s);
   _updateIntensityRowVisibility();
 }
 
@@ -390,112 +451,22 @@ function _addCycleDigitSlot(digit){
 function skillsModalSelectDigitSlot(s){
   document.getElementById('skillsModalCycleSlot').value=s;
   _renderModalDigitButtons(s);
-  const row=document.getElementById('skillsCycleSetupRow');if(row)row.style.display=s?'block':'none';
-  if(s)renderSkillsCycleSetupDigit(s);
 }
 
-let _cycleSetupWday=null,_cycleSetupSlot=null;
-
-function renderSkillsCycleSetup(preSlot){
-  _cycleSetupSlot=preSlot||null;_cycleSetupWday=null;
-  const wdayWrap=document.getElementById('skillsCycleWdayPicker');
-  if(wdayWrap)wdayWrap.innerHTML=SKILLS_WDAYS.map((d,i)=>`<div onclick="skillsCyclePickWday(${i})" id="scw${i}" style="flex:1;min-width:0;text-align:center;padding:7px 2px;border-radius:7px;border:1px solid var(--bd);background:var(--c2);font-family:var(--mono);font-size:10px;color:var(--t2);cursor:pointer;user-select:none;transition:.12s">${d}</div>`).join('');
-  const slotWrap=document.getElementById('skillsCycleSlotPicker');
-  if(slotWrap){
-    const{letters}=_getCycleSlots();
-    slotWrap.innerHTML=letters.map(s=>{const m=_slotMeta(s);const active=s===preSlot;return `<div onclick="skillsCyclePickSlot('${s}')" id="scs${s}" style="width:36px;text-align:center;padding:7px 0;border-radius:7px;border:1px solid ${active?(m?m.color+'88':'var(--ab)'):'var(--bd)'};background:${active?(m?m.bg:'var(--a2)'):'var(--c2)'};font-family:var(--mono);font-size:13px;color:${active?(m?m.color:'var(--a)'):'var(--t2)'};cursor:pointer;user-select:none;transition:.12s">${s}</div>`;}).join('');
-  }
-  if(preSlot)_cycleSetupSlot=preSlot;
-  // Sync first-week toggle to current saved value
-  const fwEl=document.getElementById('cycleFirstWeekToggle');
-  if(fwEl){
-    const isH=cycleFirstWeekHeavy;
-    fwEl.dataset.val=isH?'heavy':'light';
-    const hw=document.getElementById('cfwHeavy');const lw=document.getElementById('cfwLight');
-    if(hw){hw.style.background=isH?'rgba(232,108,58,0.12)':'var(--c2)';hw.style.borderColor=isH?'rgba(232,108,58,0.5)':'var(--bd)';hw.style.color=isH?'#E86C3A':'var(--t2)';}
-    if(lw){lw.style.background=isH?'var(--c2)':'rgba(45,212,191,0.08)';lw.style.borderColor=isH?'var(--bd)':'rgba(45,212,191,0.4)';lw.style.color=isH?'var(--t2)':'#2dd4bf';}
-  }
-  updateSkillsCyclePreview();
+// ── ДНИ НЕДЕЛИ В МОДАЛКЕ (мультивыбор) ───────────────────
+let _modalWeekDays=[];
+function _renderModalWeekDays(){
+  const wrap=document.getElementById('skillsModalWeekDays');if(!wrap)return;
+  wrap.innerHTML=SKILLS_WDAYS.map((d,i)=>{
+    const on=_modalWeekDays.includes(i);
+    return `<div onclick="skillsModalToggleWday(${i})" style="flex:1;min-width:0;text-align:center;padding:8px 2px;border-radius:var(--rm);border:1px solid ${on?'var(--ab)':'var(--bd)'};background:${on?'var(--a2)':'var(--c2)'};font-family:var(--mono);font-size:11px;color:${on?'var(--a)':'var(--t2)'};cursor:pointer;user-select:none;transition:.12s">${d}</div>`;
+  }).join('');
 }
-
-function renderSkillsCycleSetupDigit(preSlot){
-  _cycleSetupSlot=preSlot||null;_cycleSetupWday=null;
-  const wdayWrap=document.getElementById('skillsCycleWdayPicker');
-  if(wdayWrap)wdayWrap.innerHTML=SKILLS_WDAYS.map((d,i)=>`<div onclick="skillsCyclePickWday(${i})" id="scw${i}" style="flex:1;min-width:0;text-align:center;padding:7px 2px;border-radius:7px;border:1px solid var(--bd);background:var(--c2);font-family:var(--mono);font-size:10px;color:var(--t2);cursor:pointer;user-select:none;transition:.12s">${d}</div>`).join('');
-  const slotWrap=document.getElementById('skillsCycleSlotPicker');
-  if(slotWrap){
-    const{digits}=_getCycleSlots();
-    slotWrap.innerHTML=digits.map(s=>{const m=_slotMeta(s);const active=s===preSlot;return `<div onclick="skillsCyclePickSlotDigit('${s}')" id="scsd${s}" style="width:36px;text-align:center;padding:7px 0;border-radius:7px;border:1px solid ${active?(m?m.color+'88':'var(--ab)'):'var(--bd)'};background:${active?(m?m.bg:'var(--a2)'):'var(--c2)'};font-family:var(--mono);font-size:13px;color:${active?(m?m.color:'var(--a)'):'var(--t2)'};cursor:pointer;user-select:none;transition:.12s">${s}</div>`;}).join('');
-  }
-  if(preSlot)_cycleSetupSlot=preSlot;
-  // Sync first-week toggle to current saved value
-  const fwElD=document.getElementById('cycleFirstWeekToggle');
-  if(fwElD){
-    const isH=cycleFirstWeekHeavy;
-    fwElD.dataset.val=isH?'heavy':'light';
-    const hw=document.getElementById('cfwHeavy');const lw=document.getElementById('cfwLight');
-    if(hw){hw.style.background=isH?'rgba(232,108,58,0.12)':'var(--c2)';hw.style.borderColor=isH?'rgba(232,108,58,0.5)':'var(--bd)';hw.style.color=isH?'#E86C3A':'var(--t2)';}
-    if(lw){lw.style.background=isH?'var(--c2)':'rgba(45,212,191,0.08)';lw.style.borderColor=isH?'var(--bd)':'rgba(45,212,191,0.4)';lw.style.color=isH?'var(--t2)':'#2dd4bf';}
-  }
-  updateSkillsCyclePreviewDigit();
-}
-
-function skillsCyclePickSlotDigit(s){
-  _cycleSetupSlot=s;
-  const{digits}=_getCycleSlots();
-  digits.forEach(k=>{const el=document.getElementById('scsd'+k);if(!el)return;const on=k===s;const m=_slotMeta(k);el.style.background=on?(m?m.bg:'var(--a2)'):'var(--c2)';el.style.borderColor=on?(m?m.color+'88':'var(--ab)'):'var(--bd)';el.style.color=on?(m?m.color:'var(--a)'):'var(--t2)';});
-  updateSkillsCyclePreviewDigit();
-}
-
-function updateSkillsCyclePreviewDigit(){
-  const el=document.getElementById('skillsCyclePreview');if(!el)return;
-  if(_cycleSetupWday===null||!_cycleSetupSlot){el.textContent='← выбери день и номер';el.style.color='var(--t3)';return;}
-  const{pattern}=_getCycleSlots();
-  const startIdx=pattern.indexOf(_cycleSetupSlot);
-  const preview=[];let si=startIdx<0?0:startIdx;let wi=_cycleSetupWday;
-  for(let step=0;step<Math.min(pattern.length,7);step++){const m=_slotMeta(pattern[si%pattern.length]);preview.push(SKILLS_WDAYS[wi%7]+'='+(m?m.key:'?'));si++;wi++;}
-  el.textContent=preview.join('  ');el.style.color='var(--a)';
-}
-
-function skillsCyclePickWday(i){
-  _cycleSetupWday=i;
-  SKILLS_WDAYS.forEach((_,j)=>{const el=document.getElementById('scw'+j);if(!el)return;const on=j===i;el.style.background=on?'var(--a2)':'var(--c2)';el.style.borderColor=on?'var(--ab)':'var(--bd)';el.style.color=on?'var(--a)':'var(--t2)';});
-  const t=document.getElementById('skillsModalType');
-  if(t&&t.value==='mental')updateSkillsCyclePreviewDigit();else updateSkillsCyclePreview();
-}
-
-function skillsCyclePickSlot(s){
-  _cycleSetupSlot=s;
-  const{letters}=_getCycleSlots();
-  letters.forEach(k=>{const el=document.getElementById('scs'+k);if(!el)return;const on=k===s;const m=_slotMeta(k);el.style.background=on?(m?m.bg:'var(--a2)'):'var(--c2)';el.style.borderColor=on?(m?m.color+'88':'var(--ab)'):'var(--bd)';el.style.color=on?(m?m.color:'var(--a)'):'var(--t2)';});
-  updateSkillsCyclePreview();
-}
-
-function updateSkillsCyclePreview(){
-  const el=document.getElementById('skillsCyclePreview');if(!el)return;
-  if(_cycleSetupWday===null||!_cycleSetupSlot){el.textContent='← выбери день и букву';el.style.color='var(--t3)';return;}
-  const{pattern}=_getCycleSlots();
-  const startIdx=pattern.indexOf(_cycleSetupSlot);
-  const preview=[];let si=startIdx<0?0:startIdx;let wi=_cycleSetupWday;
-  for(let step=0;step<Math.min(pattern.length,7);step++){const m=_slotMeta(pattern[si%pattern.length]);preview.push(SKILLS_WDAYS[wi%7]+'='+(m?m.key:'?'));si++;wi++;}
-  el.textContent=preview.join('  ');el.style.color='var(--a)';
-}
-
-function applySkillsCycleSetup(){
-  if(_cycleSetupWday===null||!_cycleSetupSlot){flash('Выбери день недели и букву');return;}
-  const today=new Date();const todayDow=(today.getDay()+6)%7;
-  let diff=(_cycleSetupWday-todayDow+7)%7;
-  const target=new Date(today);target.setDate(today.getDate()+diff);
-  const{pattern}=_getCycleSlots();const slotIdx=pattern.indexOf(_cycleSetupSlot);
-  cycleStartDate=target.getFullYear()+'-'+String(target.getMonth()+1).padStart(2,'0')+'-'+String(target.getDate()).padStart(2,'0');
-  cycleStartSlot=slotIdx<0?0:slotIdx;
-  const fwEl=document.getElementById('cycleFirstWeekToggle');
-  if(fwEl)cycleFirstWeekHeavy=fwEl.dataset.val==='heavy';
-  LS.s('cycleStartDate',cycleStartDate);LS.s('cycleStartSlot',cycleStartSlot);LS.s('cycleFirstWeekHeavy',cycleFirstWeekHeavy);
-  syncWeekDaysFromCycle();
-  flash(`✓ Цикл: ${SKILLS_WDAYS[_cycleSetupWday]} = ${_cycleSetupSlot}`);
-  renderCycleBlock();
-  renderSkills();
+function skillsModalToggleWday(i){
+  const idx=_modalWeekDays.indexOf(i);
+  if(idx>=0)_modalWeekDays.splice(idx,1);else _modalWeekDays.push(i);
+  _modalWeekDays.sort((a,b)=>a-b);
+  _renderModalWeekDays();
 }
 
 let _savedLetterSlot=''; // сохраняем букву при переключении типа
@@ -510,7 +481,6 @@ function skillsSelectType(type){
     phys.style.border='1px solid var(--ab)';phys.style.background='var(--a2)';phys.style.color='var(--a)';
     ment.style.border='1px solid var(--bd)';ment.style.background='var(--c2)';ment.style.color='var(--t2)';
     if(lw)lw.style.display='';if(dw)dw.style.display='none';
-    const cr=document.getElementById('skillsCycleSetupRow');if(cr)cr.style.display='none';
     // Восстанавливаем сохранённую букву (если была)
     skillsModalSelectSlot(_savedLetterSlot||'');
     if(exLabel)exLabel.textContent='Упражнения (через запятую или нумерованным списком)';
@@ -522,7 +492,6 @@ function skillsSelectType(type){
     ment.style.border='1px solid var(--ab)';ment.style.background='var(--a2)';ment.style.color='var(--a)';
     phys.style.border='1px solid var(--bd)';phys.style.background='var(--c2)';phys.style.color='var(--t2)';
     if(lw)lw.style.display='none';if(dw)dw.style.display='';
-    const cr=document.getElementById('skillsCycleSetupRow');if(cr)cr.style.display='none';
     const ir=document.getElementById('skillsIntensityRow');if(ir)ir.style.display='none';
     skillsModalSelectDigitSlot('');
     if(exLabel)exLabel.textContent='Шаги / подзадачи (через запятую или нумерованным списком)';
@@ -531,7 +500,7 @@ function skillsSelectType(type){
 }
 
 function openSkillsModal(editId){const skb=document.getElementById('skillsDelBtn');if(skb)skb.style.display=editId?'':'none';
-  _skillsModalFiles=[];_cycleSetupWday=null;_cycleSetupSlot=null;
+  _skillsModalFiles=[];_modalWeekDays=[];
   _tempCycleLetters=[];_tempCycleDigits=[];_savedLetterSlot='';
   _modalEx={heavy:'',light:'',none:''};
   document.getElementById('skillsModalId').value=editId||'';
@@ -540,7 +509,16 @@ function openSkillsModal(editId){const skb=document.getElementById('skillsDelBtn
   document.getElementById('skillsModalEx').value='';
   document.getElementById('skillsModalPreviews').innerHTML='';
   document.getElementById('skillsModalFiles').value='';
-  _renderModalSlotButtons('');_renderModalDigitButtons('');
+  _renderModalSlotButtons('');_renderModalDigitButtons('');_renderModalWeekDays();
+  // Синхронизируем переключатель тяж/лёгк с текущим значением
+  const fwEl=document.getElementById('cycleFirstWeekToggle');
+  if(fwEl){
+    const isH=cycleFirstWeekHeavy;
+    fwEl.dataset.val=isH?'heavy':'light';
+    const hw=document.getElementById('cfwHeavy');const lw=document.getElementById('cfwLight');
+    if(hw){hw.style.background=isH?'rgba(232,108,58,0.12)':'var(--c2)';hw.style.borderColor=isH?'rgba(232,108,58,0.5)':'var(--bd)';hw.style.color=isH?'#E86C3A':'var(--t2)';}
+    if(lw){lw.style.background=isH?'var(--c2)':'rgba(45,212,191,0.08)';lw.style.borderColor=isH?'var(--bd)':'rgba(45,212,191,0.4)';lw.style.color=isH?'var(--t2)':'#2dd4bf';}
+  }
   skillsSelectType('physical');
   if(editId){
     const t=skillTemplates.find(x=>x.id===+editId);
@@ -560,6 +538,8 @@ function openSkillsModal(editId){const skb=document.getElementById('skillsDelBtn
       document.getElementById('skillsModalWeekIntensity').value=_wi; // reset stale prev before skillsSetWeekIntensity
       document.getElementById('skillsModalEx').value=_modalEx[_wi]||'';
       _skillsModalFiles=(t.media||[]).map(m=>({...m}));renderSkillsModalPreviews();
+      _modalWeekDays=Array.isArray(t.weekDays)?[...t.weekDays]:[];
+      _renderModalWeekDays();
       skillsSelectType(t.skillType||'physical');
       if(t.skillType==='mental'){skillsModalSelectDigitSlot(t.cycleSlot||'');}
       else{_savedLetterSlot=t.cycleSlot||'';skillsModalSelectSlot(t.cycleSlot||'');}
@@ -597,10 +577,11 @@ function confirmSkillsModal(){
   const cycleSlot=document.getElementById('skillsModalCycleSlot').value;
   const skillType=document.getElementById('skillsModalType').value||'physical';
   const weekIntensity=curI;
+  const weekDays=[..._modalWeekDays];
   const media=_skillsModalFiles.map(m=>({dataUrl:m.dataUrl,type:m.type,name:m.name}));
-  if(editId){const t=skillTemplates.find(x=>x.id===+editId);if(t){t.name=name;t.exercises=exercises;t.exercisesHeavy=exercisesHeavy;t.exercisesLight=exercisesLight;t.exercisesNone=exercisesNone;t.media=media;t.cycleSlot=cycleSlot;t.skillType=skillType;t.weekIntensity=weekIntensity;}}
-  else{skillTemplates.push({id:nid++,name,exercises,exercisesHeavy,exercisesLight,exercisesNone,media,cycleSlot,skillType,weekIntensity,created:nowDK(),days:[]});LS.s('nid',nid);}
-  syncWeekDaysFromCycle();LS.s('sportTemplates',skillTemplates);_tempCycleLetters=[];_tempCycleDigits=[];closeSkillsModal();syncSkillsToToday();renderSkills();renderCycleBlock();
+  if(editId){const t=skillTemplates.find(x=>x.id===+editId);if(t){t.name=name;t.exercises=exercises;t.exercisesHeavy=exercisesHeavy;t.exercisesLight=exercisesLight;t.exercisesNone=exercisesNone;t.media=media;t.cycleSlot=cycleSlot;t.skillType=skillType;t.weekIntensity=weekIntensity;t.weekDays=weekDays;}}
+  else{skillTemplates.push({id:nid++,name,exercises,exercisesHeavy,exercisesLight,exercisesNone,media,cycleSlot,skillType,weekIntensity,weekDays,created:nowDK(),days:[]});LS.s('nid',nid);}
+  LS.s('sportTemplates',skillTemplates);_tempCycleLetters=[];_tempCycleDigits=[];closeSkillsModal();syncSkillsToToday();renderSkills();renderCycleBlock();
 }
 
 function delSkillsTemplate(id) { deleteItem(skillTemplates, 'sportTemplates', id, renderSkills); }
@@ -614,7 +595,7 @@ function syncSkillsToToday(){
 
 let skillsCollapsed={};
 function toggleSkillsCollapse(id){skillsCollapsed[id]=!skillsCollapsed[id];renderSkills();}
-function skillsOpenMedia(tplId,mi){const t=skillTemplates.find(x=>x.id===tplId);if(!t||!t.media)return;const m=t.media[mi];if(!m)return;const existing=document.getElementById('skillsMediaLB');if(existing)existing.remove();const lb=document.createElement('div');lb.id='skillsMediaLB';lb.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:500;display:flex;align-items:center;justify-content:center';lb.onclick=()=>lb.remove();lb.innerHTML=m.type==='video'?`<video src="${m.dataUrl}" controls autoplay style="max-width:96vw;max-height:88vh;border-radius:10px"></video>`:`<img src="${m.dataUrl}" style="max-width:96vw;max-height:88vh;border-radius:10px;object-fit:contain">`;document.body.appendChild(lb);}
+function skillsOpenMedia(tplId,mi){const t=skillTemplates.find(x=>x.id===tplId);if(!t||!t.media)return;const m=t.media[mi];if(!m)return;const existing=document.getElementById('skillsMediaLB');if(existing)existing.remove();const lb=document.createElement('div');lb.id='skillsMediaLB';lb.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:500;display:flex;align-items:center;justify-content:center';lb.onclick=()=>{lb.remove();unlockBodyScroll();};lb.innerHTML=m.type==='video'?`<video src="${m.dataUrl}" controls autoplay style="max-width:96vw;max-height:88vh;border-radius:10px"></video>`:`<img src="${m.dataUrl}" style="max-width:96vw;max-height:88vh;border-radius:10px;object-fit:contain">`;document.body.appendChild(lb);lockBodyScroll();}
 function navToWeekTplItem(elId){
   const btn=getNavBtn('week');
   goPage('week',btn);
@@ -623,7 +604,7 @@ function navToWeekTplItem(elId){
   setTimeout(()=>{
     const dow=(new Date().getDay()+6)%7;
     if(typeof scrollToCard==='function')scrollToCard(dow);
-    const todayKey=dk2(new Date());
+    const todayKey=dk(new Date());
     if(typeof cardTplView!=='undefined'){cardTplView[todayKey]=true;}
     if(typeof buildWeek==='function')buildWeek();
     setTimeout(()=>{
@@ -692,7 +673,7 @@ function openTrainParamModal(editId, cat){
     document.getElementById('trainParamNotes').value = '';
     document.getElementById('trainParamModalTitle').textContent = 'добавить параметр';
   }
-  modal.classList.add('show');
+  openModal('trainParamModal');
   setTimeout(()=>document.getElementById('trainParamName').focus(), 100);
 }
 
@@ -735,21 +716,29 @@ function delTrainParam(id){
 
 function renderSkills(){
   const list=document.getElementById('skillsTemplates');if(!list)return;
-  const todayW=_cycleInfoForDate(nowDK());const todaySlot=todayW?todayW.key:null;const isRestDay=!todaySlot;
+  const _todayKey=nowDK();
+  const _todaySlots=_slotsForDate(_todayKey);
+  const _todayTpls=templatesForDate(_todayKey);
+  const isRestDay=!_todaySlots.length&&!_todayTpls.length;
 
   const renderTpl=t=>{
-    const collapsed=!!skillsCollapsed[t.id];const cs=t.cycleSlot||'';const meta=cs?_slotMeta(cs):null;const isActive=cs&&cs===todaySlot;const sType=t.skillType||'physical';
+    const collapsed=!!skillsCollapsed[t.id];const cs=t.cycleSlot||'';const meta=cs?_slotMeta(cs):null;
+    const isActive=_todayTpls.some(x=>x.id===t.id)||(!isRestDay&&cs&&_todaySlots.includes(cs));
+    const sType=t.skillType||'physical';
     const slotBadge=cs&&meta?`<div style="font-family:var(--mono);font-size:10px;font-weight:500;min-width:20px;height:20px;padding:0 5px;border-radius:5px;border:0.5px solid ${meta.color}66;background:${meta.bg};color:${meta.color};flex-shrink:0;display:flex;align-items:center;justify-content:center">${cs}</div>`:`<div style="font-family:var(--mono);font-size:10px;min-width:20px;height:20px;padding:0 5px;border-radius:5px;border:0.5px solid var(--bd);background:var(--c2);color:var(--t3);flex-shrink:0;display:flex;align-items:center;justify-content:center">—</div>`;
     const typeBadgeStyle=sType==='mental'?`border:0.5px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.08);color:var(--purple)`:`border:0.5px solid rgba(45,212,191,0.3);background:var(--a3);color:var(--a)`;
     const typeBadge=`<div style="font-family:var(--mono);font-size:9px;font-weight:700;width:20px;height:20px;border-radius:5px;${typeBadgeStyle};flex-shrink:0;display:flex;align-items:center;justify-content:center">T</div>`;
     const wdayBtns=SKILLS_WDAYS.map((d,i)=>'<div onclick="toggleSkillsDay('+t.id+','+i+')" style="font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:7px;cursor:pointer;user-select:none;transition:.12s;background:'+((t.weekDays||[]).includes(i)?'var(--a2)':'var(--c2)')+';border:1px solid '+((t.weekDays||[]).includes(i)?'var(--ab)':'var(--bd)')+';color:'+((t.weekDays||[]).includes(i)?'var(--a)':'var(--t3)')+'">'+d+'</div>').join('');
+    const wType=_getWeekIntensity(nowDK());
+    const curExs=t.exercisesHeavy&&t.exercisesHeavy.length&&t.exercisesLight&&t.exercisesLight.length
+      ?(wType==='heavy'?t.exercisesHeavy:t.exercisesLight):(t.exercises||[]);
     const activeBorder=isActive&&meta?`;border-color:${meta.color}55`:'';
     return `<div id="skills-tpl-${t.id}" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:0.5px solid rgba(255,255,255,0.05);cursor:default;transition:background .1s${activeBorder}" onmouseenter="this.style.background='rgba(45,212,191,0.03)'" onmouseleave="this.style.background=''">
       ${typeBadge}
       ${slotBadge}
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;color:#d0d0d0;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</div>
-        ${!collapsed&&t.exercises.length?`<div style="font-size:10px;color:#383838;margin-top:1px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.exercises.join(' · ')}</div>`:''}
+        ${!collapsed&&curExs.length?`<div style="font-size:10px;color:#383838;margin-top:1px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${curExs.join(' · ')}</div>`:''}
         ${sType==='physical'&&cs&&_slotHasIntensityPair(cs)?`<div style="margin-top:3px">${_intensityBadge(nowDK(),'physical')}</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
@@ -846,7 +835,7 @@ function openSkillDashboard(id){
   const accentColor=meta?meta.color:(sType==='mental'?'#A78BFA':'#2dd4bf');
   const accentBg=meta?meta.bg:(sType==='mental'?'rgba(167,139,250,0.1)':'rgba(45,212,191,0.08)');
   const typeLabel=sType==='mental'?'умственный':'физический';
-  const WDAY_NAMES=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  const WDAY_NAMES=DAYS7;
 
   const exHtml=(t.exercises&&t.exercises.length)
     ?t.exercises.map(e=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:0.5px solid var(--bd)">
@@ -866,8 +855,8 @@ function openSkillDashboard(id){
 
   const overlay=document.createElement('div');
   overlay.id='skillDashOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;display:flex;align-items:flex-end;justify-content:center;touch-action:none';
-  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;display:flex;align-items:flex-end;justify-content:center;touch-action:pan-y';
+  overlay.onclick=e=>{if(e.target===overlay)closeSkillDash();};
   overlay.innerHTML=`
     <div style="background:var(--c1);border:1px solid var(--bd);border-radius:18px 18px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:20px 18px 32px;animation:su .2s ease">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
@@ -876,7 +865,7 @@ function openSkillDashboard(id){
           <div style="font-size:16px;font-weight:500;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</div>
           <div style="font-size:11px;color:var(--t2);font-family:var(--mono);margin-top:2px">${typeLabel}${cs?' · слот '+cs:''}</div>
         </div>
-        <button onclick="document.getElementById('skillDashOverlay').remove()" style="width:28px;height:28px;border-radius:8px;background:var(--bd);border:0.5px solid var(--bd);color:var(--t2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+        <button onclick="closeSkillDash()" style="width:28px;height:28px;border-radius:8px;background:var(--bd);border:0.5px solid var(--bd);color:var(--t2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
@@ -903,11 +892,14 @@ function openSkillDashboard(id){
 
       <div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">
         <button onclick="saveSkillDashDescBtn(${id})" style="width:100%;padding:10px;border-radius:10px;background:rgba(45,212,191,0.15);border:0.5px solid rgba(45,212,191,0.4);color:rgba(45,212,191,1);font-size:13px;cursor:pointer;transition:.12s" onmouseenter="this.style.background='rgba(45,212,191,0.25)'" onmouseleave="this.style.background='rgba(45,212,191,0.15)'">сохранить</button>
-        <button onclick="openSkillsModal(${id});document.getElementById('skillDashOverlay').remove()" style="width:100%;padding:10px;border-radius:10px;background:rgba(45,212,191,0.07);border:0.5px solid rgba(45,212,191,0.2);color:rgba(45,212,191,0.7);font-size:13px;cursor:pointer;transition:.12s" onmouseenter="this.style.background='rgba(45,212,191,0.14)'" onmouseleave="this.style.background='rgba(45,212,191,0.07)'">редактировать шаблон</button>
+        <button onclick="closeSkillDash();openSkillsModal(${id})" style="width:100%;padding:10px;border-radius:10px;background:rgba(45,212,191,0.07);border:0.5px solid rgba(45,212,191,0.2);color:rgba(45,212,191,0.7);font-size:13px;cursor:pointer;transition:.12s" onmouseenter="this.style.background='rgba(45,212,191,0.14)'" onmouseleave="this.style.background='rgba(45,212,191,0.07)'">редактировать шаблон</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  lockBodyScroll();
 }
+
+function closeSkillDash(){const m=document.getElementById('skillDashOverlay');if(m)m.remove();unlockBodyScroll();}
 
 function saveSkillDashDesc(id,val){
   const t=skillTemplates.find(x=>x.id===id);if(!t)return;

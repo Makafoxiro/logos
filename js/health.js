@@ -98,7 +98,7 @@ function openPhysCardDiseaseModal(editId) {
     document.getElementById('physDiseaseNotes').value = '';
     document.getElementById('physCardModalTitle').textContent = 'добавить болезнь';const pb2=document.getElementById('physDiseaseDelBtn');if(pb2)pb2.style.display='none';
   }
-  modal.classList.add('show');
+  openModal('physCardModal');
   setTimeout(()=>document.getElementById('physDiseaseName').focus(), 100);
 }
 
@@ -425,8 +425,7 @@ function renderSleepCups(sleptHrs, normHrs){
   const _nlEl=document.getElementById('sleepNightLabel');
   if(_nlEl){
     const _n=new Date(), _p=new Date(_n); _p.setDate(_p.getDate()-1);
-    const _dd=d=>String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0');
-    _nlEl.textContent='ночь '+_dd(_p)+' → '+_dd(_n);
+    _nlEl.textContent='ночь '+displayDate(_p,{noYear:true})+' → '+displayDate(_n,{noYear:true});
   }
   const fillEl=document.getElementById('sleepFillVis');
   if(fillEl) fillEl.style.width=pct+'%';

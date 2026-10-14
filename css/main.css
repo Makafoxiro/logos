@@ -118,6 +118,23 @@ body.light #sleepPctText{color:rgba(30,30,80,0.7)!important}
 body.light #sleepFillVis{background:linear-gradient(90deg,rgba(99,130,210,0.4),rgba(122,162,247,0.65))!important}
 body.light .sleepRemTime,body.light #sleepRemTime{background:rgba(255,255,255,0.7)!important;color:#111!important;-webkit-text-fill-color:#111!important;color-scheme:light}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+/* ═══ UTILITY CLASSES ═══ замена частых инлайн-стилей (техдолг) */
+.mono{font-family:var(--mono)}
+.mono-xs{font-family:var(--mono);font-size:9px}
+.flex-center{display:flex;align-items:center}
+.label-caps{letter-spacing:1.5px;text-transform:uppercase}
+.text-hint{font-size:11px;color:var(--t3)}
+.text-danger{color:var(--red)}
+.text-warn{color:var(--amber)}
+.text-accent{color:var(--a)}
+.empty-state{font-family:var(--mono);font-size:11px;color:var(--t3);padding:12px 0;text-align:center}
+.card-base{background:var(--c1);border:1px solid var(--bd);border-radius:var(--r)}
+.hidden{display:none !important}
+.arrow-btn{flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.dl-red{color:var(--red)}
+.dl-amber{color:var(--amber)}
+.dl-ok{color:var(--a)}
 html,body{height:100%;overflow:hidden;background:var(--bg)}
 html{height:-webkit-fill-available}
 body{min-height:-webkit-fill-available}
@@ -251,7 +268,22 @@ body{font-family:var(--sans);color:var(--t);display:flex;flex-direction:column;-
 .dc-tdel:active{color:var(--red)}
 .dc-task.dc-drag-top{border-top:2px solid var(--a);box-shadow:0 -3px 6px rgba(45,212,191,0.25)}
 .dc-task.dc-drag-bot{border-bottom:2px solid var(--a) !important;box-shadow:0 3px 6px rgba(45,212,191,0.25)}
+/* Постоянные (плавающие) задачи — слабо-жёлтая подсветка важности */
+.dc-task.perm-task{background:rgba(250,204,21,0.12);border:1px solid rgba(250,204,21,0.28);border-radius:6px;padding:3px 4px;margin:1px 0}
+.dc-task.perm-task .dc-tn{color:var(--t)}
+/* Кнопка 📌 переключателя режима (в футере карточки) */
+.dc-perm-btn{display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--bd);background:var(--c2);color:var(--t3);cursor:pointer;user-select:none;transition:.12s;font-size:13px;line-height:1}
+.dc-perm-btn:active{opacity:.7}
+.dc-perm-btn.on{background:rgba(250,204,21,0.18);border-color:rgba(250,204,21,0.5);color:#facc15}
 .dc-footer{padding:3px 4px 5px;flex-shrink:0;display:flex;gap:3px}
+/* Вертикальная стопка кнопок у правого края карточки */
+.dc-btns-col{display:flex;flex-direction:column;gap:3px;flex-shrink:0;justify-content:center;margin-left:auto}
+.dc-btns-col .dc-perm-btn,
+.dc-btns-col .dc-abtn,
+.dc-btns-col .dc-tpl-btn{width:24px;height:24px;padding:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1}
+/* Постоянная задача на странице «Сегодня» */
+.today-item.perm-task{background:rgba(250,204,21,0.10);border:1px solid rgba(250,204,21,0.25)}
+.today-item.perm-task .chk{border-color:rgba(250,204,21,0.6)}
 
 /* TASK POPUP TOOLTIP */
 .task-popup{
@@ -558,9 +590,18 @@ textarea.add-inp{resize:none;height:70px;font-family:var(--sans)}
 .tgl.on::after{left:20px;background:var(--a)}
 
 /* MODALS */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:200;display:none;align-items:flex-end;justify-content:center;touch-action:none;-webkit-overflow-scrolling:none}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:200;display:none;align-items:flex-end;justify-content:center;-webkit-overflow-scrolling:none}
 .modal-bg.show{display:flex}
-.modal{background:var(--c1);border:1px solid var(--bd2);border-radius:18px 18px 0 0;width:100%;max-width:440px;padding:18px;animation:su .2s ease;max-height:84vh;overflow-y:auto}
+.modal{background:var(--c1);border:1px solid var(--bd2);border-radius:18px 18px 0 0;width:100%;max-width:440px;padding:18px;animation:su .2s ease;max-height:84vh;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain}
+/* Блокировка прокрутки фона, пока открыта любая модалка */
+html.modal-open,html.modal-open body{overflow:hidden;touch-action:none;overscroll-behavior:none}
+html.modal-open .pg-scroll,
+html.modal-open .week-scroll,
+html.modal-open .routine-blocks,
+html.modal-open .routine-swipe-slide,
+html.modal-open .nav{overflow:hidden;touch-action:none;overscroll-behavior:none}
+/* Страницы не «цепляют» скролл дальше своего контейнера */
+.pg-scroll{overscroll-behavior:contain}
 @keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .mtitle{font-family:var(--mono);font-size:9px;color:var(--t2);letter-spacing:1px;text-transform:uppercase}
@@ -633,7 +674,10 @@ textarea.field-inp{resize:none;height:65px}
   .dc-tdel{font-size:16px !important;padding:4px 6px !important}
   .dc-footer{padding:8px 12px 10px !important;gap:6px}
   .dc-inp{font-size:13px !important;padding:8px 10px !important}
-  .dc-abtn{width:36px !important;height:36px !important;font-size:20px !important}
+  /* Вертикальная стопка кнопок: единый размер выше базового (.dc-abtn 36px перекрываем) */
+  .dc-btns-col .dc-perm-btn,
+  .dc-btns-col .dc-abtn,
+  .dc-btns-col .dc-tpl-btn{width:40px !important;height:40px !important;font-size:18px !important;padding:0 !important}
   .dc-hab-btn{font-size:11px !important;padding:5px 8px !important}
   .dc-tpl-btn{font-size:13px !important;padding:5px 8px !important}
   /* Week nav dots become more prominent */

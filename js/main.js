@@ -6,7 +6,7 @@ function closeCal(){closeModal('calModal');}
 function shiftCalM(n){calVD.setMonth(calVD.getMonth()+n);renderCal();}
 function renderCal(){
   const y=calVD.getFullYear(),m=calVD.getMonth();
-  document.getElementById('calML').textContent=`${MSHORT[m].toUpperCase()} ${y}`;
+  document.getElementById('calML').textContent=displayDate(calVD,{monthOnly:true,upper:true});
   const grid=document.getElementById('calGrid');
   grid.innerHTML=DAYS7.map(d=>`<div class="clbl">${d}</div>`).join('');
   const first=new Date(y,m,1),startDow=(first.getDay()+6)%7;
@@ -34,7 +34,7 @@ function calPickWeekRow(y,m,d){
   closeCal();
   weekOffset=diffWeeks;
   if(curPage!=='week')goPage('week',getNavBtn('week'));
-  else buildWeek();
+  else renderTodayTasks(new Date());
 }
 
 // ══ SETTINGS ═══════════════════════════════════════════
@@ -101,8 +101,8 @@ function yearlyCleanup(){
 yearlyCleanup();
 
 
-function clearToday(){showConfirm('Сбросить задачи сегодня?',()=>{tasks[nowDK()]=[];LS.s('tasks',tasks);buildWeek();});}
-function clearAll(){showConfirm('⚠️ Сбросить АБСОЛЮТНО ВСЁ? Все данные, настройки и история будут удалены безвозвратно.',()=>{localStorage.clear();location.reload();});}
+function clearToday(){showConfirm('Сбросить задачи сегодня?',()=>{tasks[nowDK()]=[];LS.s('tasks',tasks);renderTodayTasks(new Date());});}
+function clearAll(){showConfirm('⚠️ Сбросить АБСОЛЮТНО ВСЁ? Все данные, настройки и история будут удалены безвозвратно.',()=>{LS.reset().then(()=>location.reload());});}
 const WATCH_TYPES=[
   {v:'film',l:'🎬 Фильм'},{v:'series',l:'📺 Сериал'},{v:'anime',l:'✨ Аниме'},
   {v:'cartoon',l:'🎨 Мульт'},{v:'manga',l:'📖 Манга'},{v:'dorama',l:'🌸 Дорама'},{v:'book',l:'📚 Книги'}
@@ -245,14 +245,14 @@ function confirmEditHw(){
   renderMemoBody();
 }
 
-function exportJSON(){const data={habits,comp,habEnabled:[...habEnabled],tasks,goals,freeGoals,annuals,routine,routineLog,weekRtLog,monthRtLog,yearRtLog,tplDone,health,hLog,supps,meds,weights,passwords,birthdays,homework,notes,watchlist,sportTemplates:skillTemplates,skillTemplates,finLog,finTpl,finPurchases,finDebts,finPieSlices,patches,nid,physDiseases,physParams,mentalParams,morningTime:mTime,eveningTime:eTime,sleepSchedule:LS.g('sleepSchedule',{bed:'23:00',wake:'05:00',naps:[]}),cycleStartDate,cycleStartSlot,cycleFirstWeekHeavy,cycleOverrides,notifCfg:LS.g('notifCfg',{}),remindersCfg:LS.g('remindersCfg',{}),interests:LS.g('interests',{cats:[],items:[]}),finBudget:LS.g('finBudget',0),sleepRem:LS.g('sleepRem',{on:false,time:'22:30'}),aiProfile:LS.g('aiProfile',{}),appTheme,appFont,appLang,autoSaveOn,notifyOn};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`logos_${new Date().toISOString().slice(0,10)}.json`;a.click();}
-function importJSON(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);['habits','comp','tasks','goals','freeGoals','annuals','routine','routineLog','weekRtLog','monthRtLog','yearRtLog','tplDone','health','hLog','supps','meds','weights','passwords','birthdays','homework','notes','watchlist','finLog','finTpl','finPurchases','finDebts','finPieSlices','patches','nid','physDiseases','physParams','mentalParams'].forEach(k=>{if(d[k]!==undefined){window[k]=d[k];LS.s(k,d[k]);}});
+function exportJSON(){const data={habits,comp,habEnabled:[...habEnabled],tasks,permanentTasks,goals,freeGoals,annuals,routine,routineLog,weekRtLog,monthRtLog,yearRtLog,tplDone,health,hLog,supps,meds,weights,birthdays,homework,notes,watchlist,sportTemplates:skillTemplates,skillTemplates,finLog,finTpl,finPurchases,finDebts,finPieSlices,nid,physDiseases,physParams,mentalParams,morningTime:mTime,eveningTime:eTime,sleepSchedule:LS.g('sleepSchedule',{bed:'23:00',wake:'05:00',naps:[]}),cycleFirstWeekHeavy,cycleOverrides,notifCfg:LS.g('notifCfg',{}),remindersCfg:LS.g('remindersCfg',{}),interests:LS.g('interests',{cats:[],items:[]}),finBudget:LS.g('finBudget',0),sleepRem:LS.g('sleepRem',{on:false,time:'22:30'}),aiProfile:LS.g('aiProfile',{}),appTheme,appFont,appLang,autoSaveOn,notifyOn};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`logos_${new Date().toISOString().slice(0,10)}.json`;a.click();}
+function importJSON(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);['habits','comp','tasks','permanentTasks','goals','freeGoals','annuals','routine','routineLog','weekRtLog','monthRtLog','yearRtLog','tplDone','health','hLog','supps','meds','weights','birthdays','homework','notes','watchlist','finLog','finTpl','finPurchases','finDebts','finPieSlices','nid','physDiseases','physParams','mentalParams'].forEach(k=>{if(d[k]!==undefined){window[k]=d[k];LS.s(k,d[k]);}});
 // ── skillTemplates: fix key mismatch (exported as skillTemplates, stored as sportTemplates) ──
 const _tpls=d.sportTemplates||d.skillTemplates;
 if(_tpls!==undefined){skillTemplates=_tpls;LS.s('sportTemplates',_tpls);LS.s('skillTemplates',_tpls);}
 if(d.habEnabled!==undefined){habEnabled=new Set(d.habEnabled);LS.s('habEnabled',d.habEnabled);}if(d.morningTime!==undefined){mTime=d.morningTime;LS.s('morningTime',mTime);}if(d.eveningTime!==undefined){eTime=d.eveningTime;LS.s('eveningTime',eTime);}if(d.sleepSchedule!==undefined){LS.s('sleepSchedule',d.sleepSchedule);}
-if(d.cycleStartDate!==undefined){cycleStartDate=d.cycleStartDate;LS.s('cycleStartDate',cycleStartDate);}
-if(d.cycleStartSlot!==undefined){cycleStartSlot=d.cycleStartSlot;LS.s('cycleStartSlot',cycleStartSlot);}
+if(d.cycleStartDate!==undefined){LS.s('cycleStartDate',d.cycleStartDate);}
+if(d.cycleStartSlot!==undefined){LS.s('cycleStartSlot',d.cycleStartSlot);}
 if(d.cycleFirstWeekHeavy!==undefined){cycleFirstWeekHeavy=d.cycleFirstWeekHeavy;LS.s('cycleFirstWeekHeavy',cycleFirstWeekHeavy);}
 if(d.cycleOverrides!==undefined){cycleOverrides=d.cycleOverrides;LS.s('cycleOverrides',cycleOverrides);}
 if(d.notifCfg!==undefined){LS.s('notifCfg',d.notifCfg);}
@@ -265,7 +265,13 @@ if(d.appTheme!==undefined){appTheme=d.appTheme;LS.s('appTheme',d.appTheme);setTh
 if(d.appFont!==undefined){appFont=d.appFont;LS.s('appFont',d.appFont);setFont(d.appFont);}
 if(d.appLang!==undefined){appLang=d.appLang;LS.s('appLang',d.appLang);setLang(d.appLang);}
 if(d.autoSaveOn!==undefined){autoSaveOn=d.autoSaveOn;LS.s('autoSaveOn',d.autoSaveOn);}
-if(d.notifyOn!==undefined){notifyOn=d.notifyOn;LS.s('notifyOn',d.notifyOn);}flash('✓ Данные импортированы');renderCurrent();setTimeout(initNapSessions,100);}catch{flash('Ошибка импорта');}};r.readAsText(f);}
+if(d.notifyOn!==undefined){notifyOn=d.notifyOn;LS.s('notifyOn',d.notifyOn);}
+// window[k]=... не меняет let-переменные из storage.js — присваиваем явно, затем миграция
+if(d.routine!==undefined){routine=d.routine;}
+if(d.routineLog!==undefined){routineLog=d.routineLog;}
+if(d.tplDone!==undefined){tplDone=d.tplDone;}
+if(typeof migrateRoutine==='function')migrateRoutine();
+flash('✓ Данные импортированы');renderCurrent();setTimeout(initNapSessions,100);}catch{flash('Ошибка импорта');}};r.readAsText(f);}
 
 // ══ NAV ════════════════════════════════════════════════
 function goPage(name,btn){
@@ -339,6 +345,7 @@ function goPage(name,btn){
   requestAnimationFrame(()=>requestAnimationFrame(measureAndInit));
 
   nav.addEventListener('scroll',()=>{
+    if(document.documentElement.classList.contains('modal-open'))return;
     if(jumping||setWidth===0)return;
     const sl=nav.scrollLeft;
     if(sl<setWidth*0.4){
@@ -386,8 +393,7 @@ function renderCurrent(){
   else if(curPage==='health'){renderHealth();checkWeightReminder();}
   else if(curPage==='memo'){renderMemoTabs();renderMemoBody();}
   else if(curPage==='skills'){renderCycleBlock();renderSkills();}
-  else if(curPage==='interests')renderInterests();
-  else if(curPage==='finance')renderFinance();
+    else if(curPage==='finance')renderFinance();
   else if(curPage==='settings')renderSettings();
 }
 
@@ -397,7 +403,7 @@ function scheduleSleepRem(){if(Notification.permission!=='granted')return;const 
 
 // ══ SWIPE NAVIGATION ═══════════════════════════════════
 (function initSwipe(){
-  const pages=['today','routine','week','goals','habits','health','skills','interests','finance','memo','settings'];
+  const pages=['today','routine','week','goals','habits','health','skills','finance','memo','settings'];
   let touchStartY=0,touchStartX=0,touchStartTime=0,touchStartEl=null;
   document.addEventListener('touchstart',e=>{
     touchStartY=e.touches[0].clientY;
@@ -471,7 +477,7 @@ function updateWeightGhost(){
 // Цвет для обычных: 10д=зелёный, 7д=лайм, 5д=бледно-жёлтый, 3д=жёлтый, 1д=оранжевый, 0=тёмно-оранж, просроч=красный
 
 function getDeadlineColor(days, scale){
-  // scale: 'long'(30д), false/'short'(10д), 'week'(7д — вотчлист/патчи), 'hw'(3д — дз)
+  // scale: 'long'(30д), false/'short'(10д), 'week'(7д — вотчлист), 'hw'(3д — дз)
   if(days===null||days===undefined)return null;
   if(days<0)return '#ef4444';   // красный — просрочено
   if(days===0)return '#ef4444'; // красный — сегодня
@@ -600,20 +606,6 @@ function collectNotifications(){
     });
   });
 
-  // Патчи с датой (шкала 7 дней)
-  patches.forEach(p=>{
-    if(!p.date||p.done)return;
-    const days=daysToDeadline(p.date,now);
-    if(days===null)return;
-    if(days>7)return;
-    const color=getDeadlineColor(days,'week');
-    if(!color)return;
-    notifs.push({
-      id:'patch_'+p.id, name:p.text.slice(0,40), days, color, type:'shortterm', icon:'🔧',
-      label:days<0?'просрочено':days===0?'срок сегодня':days===1?'срок завтра':days+'д. до срока'
-    });
-  });
-
   // ── НОВЫЙ ГОД (25 дек — 5 янв) ──
   (function(){
     const mo=now.getMonth(),d=now.getDate();
@@ -678,22 +670,6 @@ function collectNotifications(){
       id:'month_newmonth', name:monthName,
       days:daysLeft, color, type:'shortterm', icon:'📅', label
     });
-    // Рутина — незавершённые задачи сегодня
-    const rtBlocks=LS.g('rtBlocks',[]);
-    const todayDow=now.getDay();
-    let undoneRt=0;
-    rtBlocks.forEach(bl=>{
-      (bl.items||[]).forEach(it=>{
-        const done=(it.done||{})[dk(now)];
-        if(!done)undoneRt++;
-      });
-    });
-    if(undoneRt>0){
-      notifs.push({
-        id:'month_routine', name:'Рутина: '+undoneRt+' задач не закрыто',
-        days:daysLeft, color, type:'shortterm', icon:'🔄', label
-      });
-    }
   })();
 
   return notifs.sort((a,b)=>a.days-b.days);
@@ -740,10 +716,8 @@ function navigateToNotif(notifId, clickedEl){
   setTimeout(()=>{
     if     (type==='goal')   go('goals',    'goal-item-'  +id);
     else if(type==='hw')     go('memo',     'hw-item-'    +id);
-    else if(type==='watch')  go('interests','watch-item-' +id);
     else if(type==='bd')     go('health',   'bd-item-'    +id);
     else if(type==='annual') go('routine',  'annual-item-'+id);
-    else if(type==='patch')  go('memo',     'patch-item-' +id);
     // Системные (week_*, month_*, newyear) — просто закрыли панель выше
     renderNotificationsPanel();
   },130);
@@ -880,7 +854,6 @@ const _now0=new Date();_cycleCalMonth={y:_now0.getFullYear(),m:_now0.getMonth()}
     goPage('today', document.getElementById('nb-today'));
     updateWeightGhost();
     syncSkillsToToday();
-    syncWeekDaysFromCycle();
     if(notifyOn&&typeof Notification!=='undefined'&&Notification.permission==='granted'){scheduleAllNotifs();}
     const sleepRem=LS.g('sleepRem',{on:false,time:'22:30'});
     if(sleepRem.on&&Notification.permission==='granted')scheduleSleepRem();
@@ -917,7 +890,7 @@ function setTheme(t){
 const T = {
   ru:{
     logo:'LOGOS',
-    nav:['СЕГОДНЯ','РУТИНА','НЕДЕЛЯ','ЦЕЛИ','ПРИВЫЧКИ','ЗДОРОВЬЕ','НАВЫКИ','ИНТЕРЕСЫ','ДЕНЬГИ','ПАМЯТКА','НАСТРОЙКИ'],
+    nav:['СЕГОДНЯ','РУТИНА','НЕДЕЛЯ','ЦЕЛИ','ПРИВЫЧКИ','ЗДОРОВЬЕ','НАВЫКИ','ДЕНЬГИ','ПАМЯТКА','НАСТРОЙКИ'],
     'fin-chart-lbl':'доходы и расходы','fin-month-btn':'месяц',
     'fin-legend-income':'доход','fin-legend-expense':'расход',
     'fin-day-lbl':'записи за день','fin-add-income-btn':'＋ ДОХОД','fin-add-expense-btn':'－ РАСХОД',
@@ -949,7 +922,6 @@ const T = {
     'notif-newyear':'🎄 Новый год','notif-newyear-sub':'25 дек — 5 янв',
     'notif-homework':'📚 Домашние задания','notif-homework-sub':'За 3 дня до сдачи',
     'notif-watchlist':'🎬 Вотчлист','notif-watchlist-sub':'За 7 дней до дедлайна',
-    'notif-patches':'🔧 Патчи','notif-patches-sub':'За 7 дней до срока',
     'reminders-lbl':'Напоминалки','reminders-sub':'В приложении, без уведомлений',
     'reminder-weight':'⚖ Взвешивание','reminder-weight-sub':'При открытии Здоровья, если &gt;7 дней без записи',
     'ai-card-sh':'ai-карта','ai-card-lbl':'Снапшот для ИИ',
@@ -966,25 +938,18 @@ const T = {
     debtOwe:'я должен',debtOwed:'мне должны',paid:'оплачено',markPaid:'отметить оплаченным',
     today_hw_lbl:'домашнее задание',today_tasks_lbl:'задачи',today_tasks_done:'задач выполнено',
     today_routine_lbl:'рутина',today_morning:'утро',today_day_tab:'день',today_evening:'вечер',
-    today_week_routine:'🚀 рутина новой недели',today_month_routine:'📅 рутина нового месяца',
     today_fg_lbl:'просто цели',today_dl_lbl:'цели с дедлайном',
     today_sec_today:'сегодня',today_sec_planned:'запланировано',today_sec_undone:'невыполненные',
     today_no_tasks:'нет задач — добавь во вкладке «неделя»',
     today_no_planned:'нет запланированных задач',today_all_done:'всё выполнено 👍',
     today_no_tpl:'нет задач для этого дня — добавь в рутина → дни нед.',
-    days_full:['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'],
-    days_short:['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
-    days_short2:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
-    months_gen:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],
-    months_short:['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'],
-    months_full:['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
     routine_lbl:'рутина',
     rt_morning:'УТРО',rt_day:'ДЕНЬ',rt_evening:'ВЕЧЕР',rt_week:'НЕДЕЛЯ',
-    rt_month:'МЕСЯЦ',rt_year:'ГОД',rt_weekdays:'ДНИ НЕД.',rt_annuals:'ЕЖЕГОДНЫЕ',
+    rt_month:'МЕСЯЦ',rt_year:'ГОД',rt_daily:'ЕЖЕДНЕВНОЕ',rt_annuals:'ЕЖЕГОДНЫЕ',
     rt_reset:'↺ сброс',rt_add_ph:'Добавить пункт...',
-    skills_cycle_lbl:'скользящий цикл',skills_cycle_reset:'сбросить',
+    skills_cycle_lbl:'расписание',skills_cycle_reset:'сбросить',
     skills_tab_list:'список',skills_tab_cal:'календарь',
-    skills_next14:'ближайшие 14 дней',skills_templates_lbl:'шаблоны навыков',
+    skills_next14:'дни недели',skills_templates_lbl:'шаблоны навыков',
     skills_add_tpl:'+ ДОБАВИТЬ ШАБЛОН',skills_today_lbl:'СЕГОДНЯ',
     skills_workout:'ТРЕНИРОВКА',skills_mental_type:'УМСТВЕННАЯ',
     skills_rest_day:'День отдыха',skills_rest_short:'отдых',
@@ -1009,12 +974,8 @@ const T = {
     health_kcal:'Калории',health_kcal_unit:'ккал',health_prot:'Белок',health_fat:'Жиры',health_carb:'Углеводы',health_water_glasses:'стаканов',
     health_fiber:'Клетчатка',health_sugar:'Сахар',health_salt:'Соль',
     health_water:'Вода',health_sleep:'Сон',health_updated:'Нормы обновлены',
-    interests_lbl:'интересы',interests_add_cat:'+ категория',
-    interests_empty_cats:'нет категорий — создай первую',
-    interests_empty_items:'нет пунктов — добавь первый',
-    interests_item:'пункт',interests_items2:'пункта',interests_items5:'пунктов',
-    memo_passwords:'ПАРОЛИ',memo_bdays:'ДР',memo_hw:'ДЗ',memo_watchlist:'ВОТЧЛИСТ',
-    memo_notes:'ЗАМЕТКИ',memo_patches:'ПАТЧИ',
+        memo_bdays:'ДР',memo_hw:'ДЗ',memo_watchlist:'ВОТЧЛИСТ',
+    memo_notes:'ЗАМЕТКИ',
     memo_bdays_full:'ДНИ РОЖДЕНИЯ',memo_add:'+ ДОБАВИТЬ',
     goals_deadline_lbl:'ЦЕЛИ С ДЕДЛАЙНОМ',goals_free_lbl:'ПРОСТО ЦЕЛИ',
     goals_no_date:'БЕЗ ДАТЫ',goals_text_photo:'ТЕКСТ И ФОТО',
@@ -1056,7 +1017,6 @@ const T = {
     'notif-newyear':'🎄 New Year','notif-newyear-sub':'Dec 25 — Jan 5',
     'notif-homework':'📚 Homework','notif-homework-sub':'3 days before due',
     'notif-watchlist':'🎬 Watchlist','notif-watchlist-sub':'7 days before deadline',
-    'notif-patches':'🔧 Patches','notif-patches-sub':'7 days before due',
     'reminders-lbl':'Reminders','reminders-sub':'In-app, no browser permission',
     'reminder-weight':'⚖ Weigh-in','reminder-weight-sub':'On opening Health, if &gt;7 days without entry',
     'ai-card-sh':'ai card','ai-card-lbl':'AI Snapshot',
@@ -1073,25 +1033,18 @@ const T = {
     debtOwe:'I owe',debtOwed:'owed to me',paid:'paid',markPaid:'mark as paid',
     today_hw_lbl:'homework',today_tasks_lbl:'tasks',today_tasks_done:'tasks done',
     today_routine_lbl:'routine',today_morning:'morning',today_day_tab:'day',today_evening:'evening',
-    today_week_routine:'🚀 new week routine',today_month_routine:'📅 new month routine',
     today_fg_lbl:'free goals',today_dl_lbl:'deadline goals',
     today_sec_today:'today',today_sec_planned:'planned',today_sec_undone:'overdue',
     today_no_tasks:'no tasks — add in the week tab',
     today_no_planned:'no planned tasks',today_all_done:'all done 👍',
     today_no_tpl:'no tasks for this day — add in routine → weekdays',
-    days_full:['sunday','monday','tuesday','wednesday','thursday','friday','saturday'],
-    days_short:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
-    days_short2:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-    months_gen:['January','February','March','April','May','June','July','August','September','October','November','December'],
-    months_short:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-    months_full:['January','February','March','April','May','June','July','August','September','October','November','December'],
     routine_lbl:'routine',
     rt_morning:'MORNING',rt_day:'DAY',rt_evening:'EVENING',rt_week:'WEEK',
-    rt_month:'MONTH',rt_year:'YEAR',rt_weekdays:'WEEKDAYS',rt_annuals:'ANNUALS',
+    rt_month:'MONTH',rt_year:'YEAR',rt_daily:'DAILY',rt_annuals:'ANNUALS',
     rt_reset:'↺ reset',rt_add_ph:'Add item...',
-    skills_cycle_lbl:'rolling cycle',skills_cycle_reset:'reset',
+    skills_cycle_lbl:'schedule',skills_cycle_reset:'reset',
     skills_tab_list:'list',skills_tab_cal:'calendar',
-    skills_next14:'next 14 days',skills_templates_lbl:'skill templates',
+    skills_next14:'week days',skills_templates_lbl:'skill templates',
     skills_add_tpl:'+ ADD TEMPLATE',skills_today_lbl:'TODAY',
     skills_workout:'WORKOUT',skills_mental_type:'MENTAL',
     skills_rest_day:'Rest day',skills_rest_short:'rest',
@@ -1116,12 +1069,8 @@ const T = {
     health_kcal:'Calories',health_kcal_unit:'kcal',health_prot:'Protein',health_fat:'Fats',health_carb:'Carbs',health_water_glasses:'glasses',
     health_fiber:'Fiber',health_sugar:'Sugar',health_salt:'Salt',
     health_water:'Water',health_sleep:'Sleep',health_updated:'Norms updated',
-    interests_lbl:'interests',interests_add_cat:'+ category',
-    interests_empty_cats:'no categories — create the first one',
-    interests_empty_items:'no items — add the first one',
-    interests_item:'item',interests_items2:'items',interests_items5:'items',
-    memo_passwords:'PASSWORDS',memo_bdays:'BD',memo_hw:'HW',memo_watchlist:'WATCHLIST',
-    memo_notes:'NOTES',memo_patches:'PATCHES',
+        memo_bdays:'BD',memo_hw:'HW',memo_watchlist:'WATCHLIST',
+    memo_notes:'NOTES',
     memo_bdays_full:'BIRTHDAYS',memo_add:'+ ADD',
     goals_deadline_lbl:'DEADLINE GOALS',goals_free_lbl:'FREE GOALS',
     goals_no_date:'NO DATE',goals_text_photo:'TEXT & PHOTO',
@@ -1247,8 +1196,7 @@ function applyLang(){
   if(typeof renderGoals==='function'&&curPage==='goals')renderGoals();
   if(typeof renderHabits==='function'&&curPage==='habits')renderHabits();
   if(typeof renderHealth==='function'&&curPage==='health')renderHealth();
-  if(typeof renderInterests==='function'&&curPage==='interests')renderInterests();
-  if(typeof renderMemoTabs==='function'&&curPage==='memo'){renderMemoTabs();renderMemoBody();}
+    if(typeof renderMemoTabs==='function'&&curPage==='memo'){renderMemoTabs();renderMemoBody();}
   // Static labels with IDs — update via t()
   const _sl=(id,key)=>{const el=document.getElementById(id);if(el)el.textContent=t(key);};
   const _ph=(id,key)=>{const el=document.getElementById(id);if(el)el.placeholder=t(key);};
@@ -1261,8 +1209,6 @@ function applyLang(){
   _sl('today-rt-tab-morning','today_morning');
   _sl('today-rt-tab-day','today_day_tab');
   _sl('today-rt-tab-evening','today_evening');
-  _sl('today-week-routine-lbl','today_week_routine');
-  _sl('today-month-routine-lbl','today_month_routine');
   _sl('routine-page-lbl','routine_lbl');
   _sl('cycle-lbl','skills_cycle_lbl');
   _sl('cycle-reset-btn','skills_cycle_reset');
@@ -1273,9 +1219,7 @@ function applyLang(){
   _sl('skills-add-tpl-btn','skills_add_tpl');
   _sl('habits-lbl','habits_lbl');
   _sl('habits-add-lbl','habits_add_lbl');
-  _sl('interests-lbl-span','interests_lbl');
-  _sl('interests-add-cat-btn','interests_add_cat');
-  _sl('goals-deadline-lbl','goals_deadline_lbl');
+    _sl('goals-deadline-lbl','goals_deadline_lbl');
   _sl('goals-free-lbl','goals_free_lbl');
   _sl('goals-no-date-tab','goals_no_date');
   _sl('goals-text-photo-tab','goals_text_photo');

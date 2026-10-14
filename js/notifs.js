@@ -42,7 +42,7 @@ function scheduleAllNotifs(){
   _notifTimers=[];
   if(!notifEnabled())return;
 
-  const _cfgDef={deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true},patches:{on:true}};
+  const _cfgDef={deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true}};
   const _cfgStored=LS.g('notifCfg',{});
   const cfg=Object.assign({},_cfgDef,_cfgStored);
   // Добавляем недостающие вложенные ключи из дефолта
@@ -190,23 +190,6 @@ function scheduleAllNotifs(){
     _notifTimers.push(t);
   }
 
-  // ПАТЧИ — уведомление за 7 дней, проверка каждые 6ч
-  if(cfg.patches&&cfg.patches.on){
-    const checkPatches=()=>{
-      const now=new Date();
-      patches.forEach(p=>{
-        if(!p.date||p.done)return;
-        const days=daysToDeadline(p.date,now);
-        if(days===null||days<0||days>7)return;
-        const lbl=days===0?'🔧 Патч — срок сегодня!':days===1?'🔧 Патч — срок завтра!':'🔧 Патч через '+days+'д.';
-        sendNotif(lbl,p.text.slice(0,50),'patch-'+p.id+'-'+days);
-      });
-    };
-    checkPatches();
-    const t=setInterval(checkPatches,6*3600*1000);
-    _notifTimers.push(t);
-  }
-
   // НОВЫЙ ГОД — 25 дек → 5 янв
   if(cfg.newyear&&cfg.newyear.on){
     const schedNY=()=>{
@@ -241,7 +224,7 @@ function renderNotifSettings(){
   if(!el)return;
   const enabled=notifEnabled();
   const perm='Notification' in window ? Notification.permission : 'unsupported';
-  const _cfgDef={deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true},patches:{on:true}};
+  const _cfgDef={deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true}};
   const _cfgRaw=LS.g('notifCfg',{});
   const cfg=Object.assign({},_cfgDef,_cfgRaw);
   // Добавляем недостающие вложенные ключи
@@ -264,12 +247,11 @@ function renderNotifSettings(){
     <div class="srow"><div><div class="slabel">${t('notif-newyear')}</div><div class="ssub">${t('notif-newyear-sub')} ${timeInput('newyear',cfg.newyear&&cfg.newyear.time)}</div></div>${tgl('newyear',cfg.newyear&&cfg.newyear.on)}</div>
     <div class="srow"><div><div class="slabel">${t('notif-homework')}</div><div class="ssub">${t('notif-homework-sub')}</div></div>${tgl('homework',cfg.homework&&cfg.homework.on)}</div>
     <div class="srow"><div><div class="slabel">${t('notif-watchlist')}</div><div class="ssub">${t('notif-watchlist-sub')}</div></div>${tgl('watchlist',cfg.watchlist&&cfg.watchlist.on)}</div>
-    <div class="srow"><div><div class="slabel">${t('notif-patches')}</div><div class="ssub">${t('notif-patches-sub')}</div></div>${tgl('patches',cfg.patches&&cfg.patches.on)}</div>
-    `:''}  `;
+        `:''}  `;
 }
 
 function toggleNotifItem(key){
-  const cfg=LS.g('notifCfg',{deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true},patches:{on:true}});
+  const cfg=LS.g('notifCfg',{deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true}});
   if(!cfg[key])cfg[key]={on:false};
   cfg[key].on=!cfg[key].on;
   LS.s('notifCfg',cfg);
@@ -277,7 +259,7 @@ function toggleNotifItem(key){
   renderNotifSettings();
 }
 function saveNotifTime(key,val){
-  const cfg=LS.g('notifCfg',{deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true},patches:{on:true}});
+  const cfg=LS.g('notifCfg',{deadline:{on:true},weekly:{on:true,time:'09:00',dow:1},monthly:{on:true,time:'09:00',day:1},birthday:{on:true,time:'09:00'},newyear:{on:true,time:'09:00'},homework:{on:true},watchlist:{on:true}});
   if(!cfg[key])cfg[key]={on:true};
   cfg[key].time=val;
   LS.s('notifCfg',cfg);

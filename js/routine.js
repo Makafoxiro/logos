@@ -18,7 +18,20 @@ function resetRtBlock(block){
   const blockLabels={morning:'УТРО',day:'ДЕНЬ',evening:'ВЕЧЕР',week:'НЕДЕЛЯ',month:'МЕСЯЦ',year:'ГОД'};
   const label=blockLabels[block]||block;
   showConfirm(`Сбросить все отметки «${label}»?`, ()=>{
-    saveBlockLog(block,{});
+    if(['morning','day','evening'].includes(block)){
+      // ежедневные слоты: сброс по всем дням текущей недели (Пн–Вс)
+      const now=new Date();
+      const todayDow=(now.getDay()+6)%7;
+      const monday=new Date(now);monday.setDate(now.getDate()-todayDow);
+      for(let di=0;di<7;di++){
+        const d=new Date(monday);d.setDate(monday.getDate()+di);
+        const key=dk(d);
+        if(routineLog[key]&&routineLog[key][block]){routineLog[key][block]={};}
+      }
+      LS.s('routineLog',routineLog);
+    }else{
+      saveBlockLog(block,{});
+    }
     renderRoutine();
   });
 }
@@ -103,30 +116,31 @@ function rtTouchEnd(e){
 // rtEditModal state
 let _rtEditCtx={type:null,block:null,idx:null};
 function openRtEditModal(type,block,idx){
+  // daily-пункты редактируются отдельной модалкой со слотом и днями
+  if(type==='daily'){openRtDailyEditModal(idx);return;}
   _rtEditCtx={type,block,idx};
-  const name = type==='wday' ? routine.weekdays[curWdayTab][idx] : routine[block][idx];
+  const name = routine[block][idx];
   document.getElementById('rtEditInp').value=name;
   document.getElementById('rtEditTitle').textContent='изменить задачу';
+  document.getElementById('rtEditDelBtn').style.display='';
+  document.getElementById('rtDailySetupRow').style.display='none';
   openModal('rtEditModal');
   setTimeout(()=>document.getElementById('rtEditInp').focus(),100);
 }
 
 function delCurrentRtEdit(){
   if(!_rtEditCtx)return;
-  if(_rtEditCtx.type==='wday') delWdItem(_rtEditCtx.idx);
-  else delRtItem(_rtEditCtx.block,_rtEditCtx.idx);
+  delRtItem(_rtEditCtx.block,_rtEditCtx.idx);
   closeRtEditModal();
 }
 function closeRtEditModal(){closeModal('rtEditModal');}
 function confirmRtEdit(){
+  // ежедневный пункт
+  if(document.getElementById('rtDailySetupRow').style.display!=='none'){confirmRtDailyEdit();return;}
   const val=document.getElementById('rtEditInp').value.trim();
   if(!val){closeRtEditModal();return;}
   const {type,block,idx}=_rtEditCtx;
-  if(type==='wday'){
-    routine.weekdays[curWdayTab][idx]=val;
-  } else {
-    routine[block][idx]=val;
-  }
+  routine[block][idx]=val;
   LS.s('routine',routine);
   closeRtEditModal();
   renderRoutine();
@@ -139,19 +153,15 @@ let curRtSlide = LS.g('curRtSlide', 0);
 function renderRoutine(){
   const l=getRtLog();
   const blocks=[
-    {key:'morning',label:'УТРО',color:'var(--a)'},
-    {key:'day',label:'ДЕНЬ',color:'var(--amber)'},
-    {key:'evening',label:'ВЕЧЕР',color:'var(--blue)'},
+    {key:'_daily',label:'ЕЖЕДНЕВНОЕ',color:'var(--a)'},
     {key:'week',label:'НЕДЕЛЯ',color:'var(--purple)'},
     {key:'month',label:'МЕСЯЦ',color:'var(--red)'},
     {key:'_annuals',label:'ГОД',color:'var(--amber)'},
-    {key:'_weekdays',label:'ДНИ НЕД.',color:'var(--t2)'},
   ];
   const totalSlides = blocks.length;
   if(curRtSlide >= totalSlides) curRtSlide = 0;
 
-  const WDAYS_RU=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-  const WDAYS_FULL=['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
+  const WDAYS_RU=DAYS7;
 
   // Render tabs
   const tabsBar = document.getElementById('routineTabsBar');
@@ -206,39 +216,84 @@ function renderRoutine(){
     </div>`;
   }
 
-  function weekdaysSlideHTML(){
-    const wdItems=Array.isArray(routine.weekdays[curWdayTab])?routine.weekdays[curWdayTab]:[];
-    const tabsHTML=WDAYS_RU.map((d,i)=>`<div class="rt-wday-tab${i===curWdayTab?' on':''}" onclick="curWdayTab=${i};renderRoutine()">${d}</div>`).join('');
-    const itemsHTML=wdItems.map((name,i)=>`
-      <div class="rt-wday-item" data-wdidx="${i}"
-        ondragover="event.preventDefault();(function(e,el){document.querySelectorAll('.rt-wday-item').forEach(x=>x.classList.remove('drag-over-top','drag-over-bottom'));const r=el.getBoundingClientRect();if(e.clientY<r.top+r.height/2){el.classList.add('drag-over-top');}else{el.classList.add('drag-over-bottom');}})(event,this)"
-        ondragleave="this.classList.remove('drag-over-top','drag-over-bottom')"
-        ondrop="rtWdDrop(${i},event)">
-        <div class="rt-drag"
-          draggable="true"
-          ondragstart="rtWdDragStart(${i},this.parentElement);event.stopPropagation()"
-          ondragend="rtWdDragEnd(this.parentElement)"
-          ontouchstart="rtWdTouchStart(event,${i},this.parentElement)"
-          ontouchmove="rtTouchMoveWd(event)"
-          ontouchend="rtWdTouchEnd(event)"
-          onclick="event.stopPropagation()">⠿</div>
-        <div class="rt-wday-name">${name}</div>
-        <button class="rt-edit" onclick="editWdItem(${i})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-
-      </div>`).join('');
-    return `<div class="rt-block">
-      <div class="rt-head">
-        <div class="rt-title" style="color:var(--t2)">ДНИ НЕДЕЛИ</div>
-        <div style="font-family:var(--mono);font-size:8px;color:var(--t3)">${wdItems.length} задач</div>
+  // ── СЛАЙД «ЕЖЕДНЕВНОЕ»: слот → день недели → пункты ──
+  const WDAYS_RU2=DAYS7;
+  function dailySlideHTML(){
+    const todayDow=(new Date().getDay()+6)%7;
+    const all=(routine.daily||[]).filter(x=>x&&Array.isArray(x.days));
+    const slots=[
+      {key:'morning',label:'УТРО',color:'var(--a)'},
+      {key:'day',label:'ДЕНЬ',color:'var(--amber)'},
+      {key:'evening',label:'ВЕЧЕР',color:'var(--blue)'},
+    ];
+    const groups=slots.map(sl=>{
+      const slotItems=all.filter(x=>(x.slot||'day')===sl.key);
+      const collapsed=!!_dailyCollapsed[sl.key];
+      // дни недели, в которые попадает этот слот
+      const now=new Date();
+      const monday=new Date(now);monday.setDate(now.getDate()-todayDow);
+      const keyForDow=di=>{const d=new Date(monday);d.setDate(monday.getDate()+di);return dk(d);};
+      // есть ли отметки за эту неделю в данном слоте (для кнопки сброса)
+      const anyDone=WDAYS_RU2.some((_,di)=>{
+        const gLog=routineLog[keyForDow(di)]||{};
+        return slotItems.some(x=>isRtDone(sl.key,x.name,gLog[sl.key]));
+      });
+      const dayGroups=WDAYS_RU2.map((dl,di)=>({label:dl,dow:di,dateKey:keyForDow(di),items:slotItems.filter(x=>x.days.includes(di))}))
+        .filter(g=>g.items.length);
+      const bodyHTML=dayGroups.length ? dayGroups.map(g=>{
+        const today=(g.dow===todayDow);
+        const gLog=routineLog[g.dateKey]||{};
+        const itemsHTML=g.items.map(x=>{
+          const realIdx=(routine.daily||[]).indexOf(x);
+          const dn=isRtDone(sl.key,x.name,gLog[sl.key]);
+          // бейдж дней — только если пункт привязан не к одному дню
+          const badge=(x.days.length>1)?`<div style="font-family:var(--mono);font-size:8px;color:var(--t3);border:1px solid var(--bd);border-radius:5px;padding:2px 4px;margin-right:6px;white-space:nowrap">${x.days.map(d=>WDAYS_RU2[d]).join(' ')}</div>`:'';
+          return `
+        <div class="rt-item${dn?' done':''}"
+          id="rt-item-${sl.key}-${g.dow}-${realIdx}"
+          data-block="_daily" data-idx="${realIdx}"
+          ondragover="rtDragOver(event,this)"
+          ondragleave="rtDragLeave(this)"
+          ondrop="rtDropDaily(${realIdx},event)"
+          onclick="toggleDailyRt(${realIdx},'${g.dateKey}')">
+          <div class="rt-drag"
+            draggable="true"
+            ondragstart="rtDragStart('_daily',${realIdx},this.parentElement);event.stopPropagation()"
+            ondragend="rtDragEnd(this.parentElement)"
+            ontouchstart="rtTouchStart(event,'_daily',${realIdx},this.parentElement)"
+            ontouchmove="rtTouchMove(event)"
+            ontouchend="rtTouchEndDaily(event)"
+            onclick="event.stopPropagation()">⠿</div>
+          <div class="rt-chk">${dn?'✓':''}</div>
+          ${badge}<div class="rt-name">${x.name}</div>
+          <button class="rt-edit" onclick="event.stopPropagation();openRtEditModal('daily',null,${realIdx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        </div>`;
+        }).join('');
+        return `<div style="margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 2px 4px">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:${today?'var(--a)':'var(--t3)'}">${g.label.toUpperCase()}${today?' · СЕГОДНЯ':''}</div>
+            <div style="flex:1;height:1px;background:var(--bd)"></div>
+          </div>
+          <div class="rt-items">${itemsHTML}</div>
+        </div>`;
+      }).join('') : '<div style="font-size:12px;color:var(--t3);font-family:var(--mono);padding:8px 0">пусто — добавь пункт</div>';
+      return `<div class="rt-block">
+        <div class="rt-head">
+          <div class="rt-title" style="color:${sl.color}">${sl.label}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${anyDone?`<button onclick="resetRtBlock('${sl.key}')" style="background:none;border:none;font-family:var(--mono);font-size:8px;color:var(--t3);cursor:pointer;padding:2px 6px;border-radius:5px;border:1px solid var(--bd)">↺ сброс</button>`:''}
+            <div onclick="toggleDailyGroup('${sl.key}')" style="font-size:12px;color:var(--t3);cursor:pointer;padding:2px 6px;user-select:none">${collapsed?'▸':'▾'}</div>
+          </div>
+        </div>
+        ${collapsed?'':`<div>${bodyHTML}</div>`}
+      </div>`;
+    }).join('');
+    return `<div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 8px">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:1px">ВСЯ НЕДЕЛЯ · ${WDAYS_RU2[todayDow].toUpperCase()}</div>
+        <button onclick="openDailyAddModal()" style="background:var(--a2);border:1px solid var(--ab);border-radius:8px;color:var(--a);font-family:var(--mono);font-size:10px;padding:6px 12px;cursor:pointer;transition:.15s">+ ДОБАВИТЬ ПУНКТ</button>
       </div>
-      <div class="rt-wday-tabs">${tabsHTML}</div>
-      <div class="rt-wday-items" id="wdayItems">${itemsHTML}</div>
-      <div class="rt-add">
-        <textarea class="add-inp" id="rti-wday" placeholder="Задача для ${WDAYS_FULL[curWdayTab]}..." rows="1" style="resize:none;overflow:hidden;font-family:var(--sans);font-size:14px;padding:11px 13px;min-height:44px"
-          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addWdItem();}"></textarea>
-        <button class="add-btn" onclick="addWdItem()" style="align-self:flex-start">+</button>
-      </div>
+      ${groups}
     </div>`;
   }
 
@@ -358,8 +413,8 @@ function renderRoutine(){
       const isSoon=days!==null&&days>=0&&days<=14;
       const dColor=isOverdue?'var(--red)':isSoon?'var(--amber)':'var(--a)';
       const dLabel=days===null?'—':days===0?'сегодня!':days===1?'завтра':days<0?`просрочено ${Math.abs(days)}д.`:days+'д.';
-      const nextFmt=nextDateStr?formatDate(nextDateStr):'';
-      const lastFmt=a.lastDate?formatDate(a.lastDate):'';
+      const nextFmt=nextDateStr?displayDate(nextDateStr):'';
+      const lastFmt=a.lastDate?displayDate(a.lastDate):'';
       const pl=periodLabel(a.period);
 
       // Overdue banner with action button
@@ -423,7 +478,7 @@ function renderRoutine(){
 
   track.innerHTML = blocks.map((b,i)=>{
     let content;
-    if(b.key==='_weekdays') content=weekdaysSlideHTML();
+    if(b.key==='_daily') content=dailySlideHTML();
     else if(b.key==='_annuals') content=annualsSlideHTML();
     else if(b.key==='week') content=weekSlideHTML();
     else content=blockInnerHTML(b);
@@ -451,7 +506,7 @@ function renderRoutine(){
 function goRtSlide(idx){
   // Считаем реальное количество слайдов из DOM, не хардкодим
   const track=document.getElementById('routineSwipeTrack');
-  const blocks=track ? track.querySelectorAll('.routine-swipe-slide').length : 8;
+  const blocks=track ? track.querySelectorAll('.routine-swipe-slide').length : 4;
   curRtSlide=Math.max(0,Math.min(blocks-1,idx));
   LS.s('curRtSlide',curRtSlide);
   if(track){
@@ -462,7 +517,7 @@ function goRtSlide(idx){
   const tabsBar=document.getElementById('routineTabsBar');
   if(tabsBar){
     const tabs=tabsBar.querySelectorAll('.rt-tab');
-    const colors=['var(--a)','var(--amber)','var(--blue)','var(--purple)','var(--red)','var(--amber)','var(--amber)','var(--t2)'];
+    const colors=['var(--a)','var(--purple)','var(--red)','var(--amber)'];
     tabs.forEach((t,i)=>{
       t.className='rt-tab'+(i===curRtSlide?' on':'');
       t.style.color=i===curRtSlide?colors[i]:'';
@@ -507,67 +562,164 @@ function addRtItem(block){
 }
 function delRtItem(block,idx){routine[block].splice(idx,1);LS.s('routine',routine);renderRoutine();}
 
-// Weekday template functions
-let rtWdDragSrcIdx=null;
-function rtWdDragStart(idx,el){rtWdDragSrcIdx=idx;el.classList.add('dragging');}
-function rtWdDragEnd(el){el.classList.remove('dragging');document.querySelectorAll('.rt-wday-item').forEach(e=>e.classList.remove('drag-over-top','drag-over-bottom'));}
-function rtWdDrop(toIdx,e){
-  document.querySelectorAll('.rt-wday-item').forEach(el=>el.classList.remove('drag-over-top','drag-over-bottom'));
-  if(rtWdDragSrcIdx===null||rtWdDragSrcIdx===toIdx)return;
-  const arr=routine.weekdays[curWdayTab];
-  let insertAt=toIdx;
-  if(e){
-    const el=e.currentTarget||e.target?.closest('.rt-wday-item');
-    if(el){
-      const rect=el.getBoundingClientRect();
-      if(e.clientY>=rect.top+rect.height/2) insertAt=toIdx+1;
-    }
-  }
-  const [moved]=arr.splice(rtWdDragSrcIdx,1);
-  const finalIdx=insertAt>rtWdDragSrcIdx?insertAt-1:insertAt;
-  arr.splice(Math.max(0,Math.min(arr.length,finalIdx)),0,moved);
-  rtWdDragSrcIdx=null;
-  LS.s('routine',routine);renderRoutine();
-}
-let rtWdTouchSrc={idx:null};
-function rtWdTouchStart(e,idx,el){rtWdTouchSrc={idx};el.classList.add('dragging');}
-function rtTouchMoveWd(e){
-  if(rtWdTouchSrc.idx===null)return;
-  e.preventDefault();
-  const touch=e.touches[0];
-  document.querySelectorAll('.rt-wday-item').forEach(el=>el.classList.remove('drag-over-top','drag-over-bottom'));
-  const target=document.elementFromPoint(touch.clientX,touch.clientY);
-  const item=target?.closest('.rt-wday-item');
-  if(item){
-    const rect=item.getBoundingClientRect();
-    if(touch.clientY<rect.top+rect.height/2){item.classList.add('drag-over-top');}
-    else{item.classList.add('drag-over-bottom');}
-  }
-}
-function rtWdTouchEnd(e){
-  if(rtWdTouchSrc.idx===null)return;
-  const touch=e.changedTouches[0];
-  const target=document.elementFromPoint(touch.clientX,touch.clientY);
-  const item=target?.closest('.rt-wday-item');
-  if(item){
-    const toIdx=parseInt(item.dataset.wdidx);
-    const arr=routine.weekdays[curWdayTab];
-    const rect=item.getBoundingClientRect();
-    const insertAfter=touch.clientY>=rect.top+rect.height/2;
-    const insertAt=insertAfter?(toIdx>rtWdTouchSrc.idx?toIdx:toIdx+1):(toIdx>rtWdTouchSrc.idx?toIdx-1:toIdx);
-    const [moved]=arr.splice(rtWdTouchSrc.idx,1);
-    arr.splice(Math.max(0,Math.min(arr.length,insertAt)),0,moved);
-    LS.s('routine',routine);
-  }
-  rtWdTouchSrc={idx:null};
+
+// ══ ЕЖЕДНЕВНОЕ (routine.daily) ════════════════════════════
+// routine.daily = [{name, slot:'morning'|'day'|'evening', days:[0..6]}]  (0=Пн..6=Вс)
+const RT_SLOT_LABELS={morning:'УТРО',day:'ДЕНЬ',evening:'ВЕЧЕР'};
+const RT_SLOT_COLORS={morning:'var(--a)',day:'var(--amber)',evening:'var(--blue)'};
+const RT_WDAYS=DAYS7;
+let _dailyCollapsed={morning:true,day:true,evening:true};
+
+function toggleDailyGroup(slot){
+  _dailyCollapsed[slot]=!_dailyCollapsed[slot];
   renderRoutine();
 }
-function addWdItem(){
-  const inp=document.getElementById('rti-wday');const name=inp.value.trim();if(!name)return;
-  if(!Array.isArray(routine.weekdays[curWdayTab]))routine.weekdays[curWdayTab]=[];
-  routine.weekdays[curWdayTab].push(name);LS.s('routine',routine);inp.value='';renderRoutine();
+
+function toggleDailyRt(realIdx,dateKey){
+  const item=(routine.daily||[])[realIdx];
+  if(!item)return;
+  const key=dateKey||nowDK();
+  if(!routineLog[key])routineLog[key]={morning:{},day:{},evening:{}};
+  const slot=item.slot||'day';
+  if(!routineLog[key][slot])routineLog[key][slot]={};
+  const nowDone=!routineLog[key][slot][item.name];
+  routineLog[key][slot][item.name]=nowDone;
+  if(!nowDone)delete routineLog[key][slot][item.name];
+  LS.s('routineLog',routineLog);
+  renderRoutine();
 }
-function delWdItem(idx){routine.weekdays[curWdayTab].splice(idx,1);LS.s('routine',routine);renderRoutine();}
-function editWdItem(idx){openRtEditModal('wday',null,idx);}
 
+function rtDropDaily(toRealIdx,e){
+  document.querySelectorAll('.rt-item').forEach(el=>el.classList.remove('drag-over-top','drag-over-bottom'));
+  if(rtDragSrc.block!=='_daily')return;
+  const arr=routine.daily;
+  let toIdx=toRealIdx;
+  if(e){
+    const el=e.currentTarget||e.target?.closest('.rt-item');
+    if(el){
+      const rect=el.getBoundingClientRect();
+      if(e.clientY>=rect.top+rect.height/2)toIdx=toRealIdx+1;
+    }
+  }
+  if(rtDragSrc.idx===toIdx)return;
+  const [moved]=arr.splice(rtDragSrc.idx,1);
+  const insertAt=toIdx>rtDragSrc.idx?toIdx-1:toIdx;
+  arr.splice(Math.max(0,Math.min(arr.length,insertAt)),0,moved);
+  LS.s('routine',routine);
+  renderRoutine();
+}
 
+function rtTouchEndDaily(e){
+  if(rtTouchSrc.block==='_daily'){
+    const touch=e.changedTouches[0];
+    const target=document.elementFromPoint(touch.clientX,touch.clientY);
+    const item=target?.closest('.rt-item[data-block="_daily"]');
+    if(item){
+      const toIdx=parseInt(item.dataset.idx);
+      const arr=routine.daily;
+      const rect=item.getBoundingClientRect();
+      const insertAfter=touch.clientY>=rect.top+rect.height/2;
+      const insertAt=insertAfter?(toIdx>rtTouchSrc.idx?toIdx:toIdx+1):(toIdx>rtTouchSrc.idx?toIdx-1:toIdx);
+      const [moved]=arr.splice(rtTouchSrc.idx,1);
+      arr.splice(Math.max(0,Math.min(arr.length,insertAt-(insertAt>rtTouchSrc.idx?1:0))),0,moved);
+      LS.s('routine',routine);
+    }
+    rtTouchSrc={block:null,idx:null,el:null,clone:null,startY:0};
+    renderRoutine();
+    return;
+  }
+  rtTouchEnd(e);
+}
+
+// ── Модалка создания/редактирования ежедневного пункта ──
+let _rtDailyEditIdx=null; // null = создание, иначе индекс в routine.daily
+let _rtDailyDraft={slot:'morning',days:[]};
+
+function _renderRtDailyModal(){
+  // слоты
+  const slotWrap=document.getElementById('rtDailySlotWrap');
+  if(slotWrap){
+    slotWrap.innerHTML=['morning','day','evening'].map(k=>{
+      const on=_rtDailyDraft.slot===k;
+      return `<div onclick="rtDailyPickSlot('${k}')" style="flex:1;text-align:center;padding:9px 0;border-radius:var(--rm);border:1px solid ${on?'var(--ab)':'var(--bd)'};background:${on?'var(--a2)':'var(--c2)'};font-family:var(--mono);font-size:11px;color:${on?'var(--a)':'var(--t2)'};cursor:pointer;user-select:none;transition:.12s">${RT_SLOT_LABELS[k]}</div>`;
+    }).join('');
+  }
+  // дни недели
+  const daysWrap=document.getElementById('rtDailyDaysWrap');
+  if(daysWrap){
+    daysWrap.innerHTML=RT_WDAYS.map((d,i)=>{
+      const on=_rtDailyDraft.days.includes(i);
+      return `<div onclick="rtDailyToggleDay(${i})" style="flex:1;min-width:0;text-align:center;padding:8px 0;border-radius:var(--rm);border:1px solid ${on?'var(--ab)':'var(--bd)'};background:${on?'var(--a2)':'var(--c2)'};font-family:var(--mono);font-size:11px;color:${on?'var(--a)':'var(--t2)'};cursor:pointer;user-select:none;transition:.12s">${d}</div>`;
+    }).join('');
+  }
+}
+
+function rtDailyPickSlot(k){_rtDailyDraft.slot=k;_renderRtDailyModal();}
+function rtDailyToggleDay(i){
+  const idx=_rtDailyDraft.days.indexOf(i);
+  if(idx>=0)_rtDailyDraft.days.splice(idx,1);else _rtDailyDraft.days.push(i);
+  _rtDailyDraft.days.sort((a,b)=>a-b);
+  _renderRtDailyModal();
+}
+
+function openDailyAddModal(){
+  _rtDailyEditIdx=null;
+  _rtDailyDraft={slot:'morning',days:[]};
+  document.getElementById('rtEditTitle').textContent='новый пункт';
+  document.getElementById('rtEditInp').value='';
+  document.getElementById('rtEditDelBtn').style.display='none';
+  document.getElementById('rtDailySetupRow').style.display='block';
+  _renderRtDailyModal();
+  openModal('rtEditModal');
+  setTimeout(()=>document.getElementById('rtEditInp').focus(),100);
+}
+
+function openRtDailyEditModal(realIdx){
+  const item=(routine.daily||[])[realIdx];
+  if(!item)return;
+  _rtDailyEditIdx=realIdx;
+  _rtDailyDraft={slot:item.slot||'day',days:Array.isArray(item.days)?item.days.slice():[]};
+  document.getElementById('rtEditTitle').textContent='изменить пункт';
+  document.getElementById('rtEditInp').value=item.name||'';
+  document.getElementById('rtEditDelBtn').style.display='';
+  document.getElementById('rtDailySetupRow').style.display='block';
+  _renderRtDailyModal();
+  openModal('rtEditModal');
+  setTimeout(()=>document.getElementById('rtEditInp').focus(),100);
+}
+
+function confirmRtDailyEdit(){
+  const name=document.getElementById('rtEditInp').value.trim();
+  if(!name){flash('Введи название');return;}
+  if(!_rtDailyDraft.days.length){flash('Выбери дни недели');return;}
+  if(!routine.daily)routine.daily=[];
+  if(_rtDailyEditIdx===null){
+    routine.daily.push({name,slot:_rtDailyDraft.slot,days:[..._rtDailyDraft.days]});
+  }else{
+    const it=routine.daily[_rtDailyEditIdx];
+    if(it){it.name=name;it.slot=_rtDailyDraft.slot;it.days=[..._rtDailyDraft.days];}
+  }
+  LS.s('routine',routine);
+  closeModal('rtEditModal');
+  renderRoutine();
+}
+
+function delRtDailyEdit(){
+  if(_rtDailyEditIdx===null)return;
+  routine.daily.splice(_rtDailyEditIdx,1);
+  LS.s('routine',routine);
+  closeModal('rtEditModal');
+  renderRoutine();
+}
+
+// ── Хелперы для других страниц (Сегодня/Неделя) ──
+function dailyItemsForDow(dow){
+  return (routine.daily||[]).filter(x=>x&&Array.isArray(x.days)&&x.days.includes(dow));
+}
+function dailyItemsForSlot(slot,dow){
+  return dailyItemsForDow(dow).filter(x=>(x.slot||'day')===slot);
+}
+function dailyDoneCount(dow,dateKey){
+  const log=routineLog[dateKey]||{};
+  return dailyItemsForDow(dow).filter(x=>log[x.slot||'day']&&log[x.slot||'day'][x.name]).length;
+}

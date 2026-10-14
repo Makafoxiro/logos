@@ -52,9 +52,8 @@ function renderFinChart(){
     labels=days.map(d=>d.getDate()%5===0?String(d.getDate()):'');
   } else {
     // year — 12 months aggregated
-    const MONTHS_RU=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
     for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);days.push(d);}
-    labels=days.map(d=>MONTHS_RU[d.getMonth()]);
+    labels=days.map(d=>MSHORT[d.getMonth()]);
   }
 
   let income,expense;
@@ -344,7 +343,7 @@ function renderFinPurchases(){
         <div style="font-size:14px;font-weight:500;margin-bottom:3px;${p.paid?'text-decoration:line-through;color:var(--t2)':''}">${p.name}</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span style="font-family:var(--mono);font-size:13px;color:${p.paid?'var(--a)':'var(--amber)'}">${p.paid?'✓ куплено':priceLabel}</span>
-          ${!p.paid&&p.date?`<span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${formatDate(p.date)}</span>`:''}
+          ${!p.paid&&p.date?`<span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${displayDate(p.date)}</span>`:''}
           ${!p.paid?daysLabel:''}
         </div>
       </div>
@@ -395,7 +394,7 @@ function renderFinDebts(){
           ${d.desc?`<div style="font-size:11px;color:var(--t2);margin-top:1px">${d.desc}</div>`:''}
           <div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap">
             <span style="font-family:var(--mono);font-size:13px;color:${color}">${isOwe?'−':'+'}${d.amount.toLocaleString('ru')} ₽</span>
-            ${d.date?`<span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${formatDate(d.date)}</span>`:''}
+            ${d.date?`<span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${displayDate(d.date)}</span>`:''}
             ${daysLbl}
             ${d.paid?`<span style="font-family:var(--mono);font-size:9px;color:var(--a)">✓ ${t('paid')}</span>`:''}
           </div>

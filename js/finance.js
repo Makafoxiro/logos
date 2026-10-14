@@ -101,7 +101,7 @@ function renderFinChart(){
     ctx.strokeStyle=gridColor;ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
     if(i>0){
-      ctx.fillStyle=labelColor;ctx.font='7px Nunito,sans-serif';ctx.textAlign='left';
+      ctx.fillStyle=labelColor;ctx.font='7px DM Mono,monospace';ctx.textAlign='left';
       ctx.fillText(Math.round(maxVal*i/4/1000)+'k',pad.l+2,y-2);
     }
   }
@@ -156,7 +156,7 @@ function renderFinChart(){
   labels.forEach((lbl,i)=>{
     if(!lbl)return;
     const x=pad.l+(n<=1?cW/2:cW/(n-1)*i);
-    ctx.font=`${finPeriod==='year'?8:8}px Nunito,sans-serif`;
+    ctx.font=`${finPeriod==='year'?8:8}px DM Mono,monospace`;
     ctx.fillText(lbl,x,H-6);
   });
 
@@ -553,7 +553,7 @@ function drawPieChart(canvasId, legendId, expanded){
     ctx.fillStyle='rgba(255,255,255,0.1)';
     ctx.beginPath();ctx.arc(canvas.width/2,canvas.height/2,canvas.width/2-10,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,0.3)';
-    ctx.font=`11px Nunito,sans-serif`;ctx.textAlign='center';
+    ctx.font=`11px DM Mono,monospace`;ctx.textAlign='center';
     ctx.fillText('нет категорий',canvas.width/2,canvas.height/2);
     legendEl.innerHTML='<div style="font-size:12px;color:var(--t3);font-family:var(--mono);text-align:center;padding:8px 0">добавь категории кнопкой + выше</div>';
     return;
@@ -592,7 +592,7 @@ function drawPieChart(canvasId, legendId, expanded){
     const normPct=Math.round((s.pct/totalPct)*100);
     if(angle>0.35){
       ctx.fillStyle='rgba(0,0,0,0.75)';
-      ctx.font=`bold ${expanded?11:9}px Nunito,sans-serif`;
+      ctx.font=`bold ${expanded?11:9}px DM Mono,monospace`;
       ctx.textAlign='center';
       ctx.textBaseline='middle';
       ctx.fillText(normPct+'%',lx,ly);
@@ -609,7 +609,7 @@ function drawPieChart(canvasId, legendId, expanded){
 
   // Center text
   ctx.fillStyle='rgba(255,255,255,0.7)';
-  ctx.font=`${expanded?11:9}px Nunito,sans-serif`;
+  ctx.font=`${expanded?11:9}px DM Mono,monospace`;
   ctx.textAlign='center';
   ctx.textBaseline='middle';
   ctx.fillText(totalPct+'%',cx,cy+1);

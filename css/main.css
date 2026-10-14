@@ -139,9 +139,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg)}
 html{height:-webkit-fill-available}
 body{min-height:-webkit-fill-available}
 body{font-family:var(--sans);font-weight:500;color:var(--t);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
-/* Максимальная гарантия: ВСЁ наследует гарнитуру от body (Nunito), если явно не задано иное.
-   Правила с классами (специфичность выше) и presentation-атрибуты SVG перебиваются этим правилом. */
-*{font-family:inherit}
 /* ── «Пожирнее»: утолщаем мелкие капслок-подписи и чипы ── */
 .sh,.card-t,.mtitle,.field-label,.rt-tab,.rt-tab.on,.rt-title,.rt-wday-tab,.mono,.mono-xs,.empty-state,.top-date,.banner,.month-strip-label,.phys-stat-lbl,.phys-stat-val,.phys-stat-unit,.dc-cnt,.dc-dn,.dc-pct-t,.mc-label,.mc-bigval,.rh-label,.rh-pct,.wn-lbl,.annual-date,.annual-days,.goal-deadline,.goal-del,.mg-add-btn,.dc-hab-btn,.add-inp,.add-btn,.wchip,.rt-tab,.sh-btn{font-weight:600}
 .rh-pct,.mc-bigval,#waterCount,#sleepHeroNum{font-weight:800}

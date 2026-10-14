@@ -1,5 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@400;500&family=Roboto+Mono:wght@400;500&family=Lexend:wght@300;400;500&display=swap');
-/* Font themes applied via JS setProperty on :root */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+/* Единая гарнитура: Nunito (все переменные указывают на неё) */
 :root{
   --a:#2dd4bf;--a2:rgba(45,212,191,0.12);--a3:rgba(45,212,191,0.06);--ab:rgba(45,212,191,0.28);
   --bg:#0a0a0a;--c1:#1a1a1a;--c2:#222;--c3:#2a2a2a;--c4:#333;
@@ -7,7 +7,7 @@
   --t:#f2f2f2;--t2:#a0a0a0;--t3:#4a4a4a;
   --red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--purple:#a78bfa;
   --r:14px;--rm:10px;
-  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--hd:'Bebas Neue',sans-serif;
+  --mono:'Nunito',sans-serif;--sans:'Nunito',sans-serif;--hd:'Nunito',sans-serif;
   --nav:64px;
 }
 /* light-init применяется мгновенно из <head> до загрузки JS, избегает мигания */
@@ -138,7 +138,10 @@ body.light .sleepRemTime,body.light #sleepRemTime{background:rgba(255,255,255,0.
 html,body{height:100%;overflow:hidden;background:var(--bg)}
 html{height:-webkit-fill-available}
 body{min-height:-webkit-fill-available}
-body{font-family:var(--sans);color:var(--t);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+body{font-family:var(--sans);font-weight:500;color:var(--t);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+/* ── «Пожирнее»: утолщаем мелкие капслок-подписи и чипы ── */
+.sh,.card-t,.mtitle,.field-label,.rt-tab,.rt-tab.on,.rt-title,.rt-wday-tab,.mono,.mono-xs,.empty-state,.top-date,.banner,.month-strip-label,.phys-stat-lbl,.phys-stat-val,.phys-stat-unit,.dc-cnt,.dc-dn,.dc-pct-t,.mc-label,.mc-bigval,.rh-label,.rh-pct,.wn-lbl,.annual-date,.annual-days,.goal-deadline,.goal-del,.mg-add-btn,.dc-hab-btn,.add-inp,.add-btn,.wchip,.rt-tab,.sh-btn{font-weight:600}
+.rh-pct,.mc-bigval,#waterCount,#sleepHeroNum{font-weight:800}
 
 /* LAYOUT */
 #root{flex:1;overflow:hidden;display:flex;flex-direction:column;height:100dvh;width:100%}
@@ -161,7 +164,7 @@ body{font-family:var(--sans);color:var(--t);display:flex;flex-direction:column;-
 /* NAV */
 .nav{height:var(--nav);background:rgba(10,10,10,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--bd);display:flex;padding:0 2px 4px;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
 .nav::-webkit-scrollbar{display:none}
-.nb{flex:1;min-width:48px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px 4px;border:none;background:none;color:var(--t3);font-family:'DM Mono',monospace;font-size:6.5px;letter-spacing:.2px;cursor:pointer;transition:.12s;white-space:nowrap}
+.nb{flex:1;min-width:48px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px 4px;border:none;background:none;color:var(--t3);font-family:var(--mono,'Nunito',sans-serif);font-size:6.5px;letter-spacing:.2px;cursor:pointer;transition:.12s;white-space:nowrap}
 .nb.on{color:var(--a)}
 .nb svg{width:17px;height:17px}
 

@@ -265,6 +265,27 @@ const GDrive = (() => {
   //    logos_backup_YYYY-MM-DD <- исторический (один в сутки, не перезаписывается)
   //    backup                  <- текущий
   //
+  // ── Шифрование бэкапа ─────────────────────────────────────────
+  // Файл в Drive содержит {"_enc": {iv, ct, salt, iterations}} —
+  // шифртекст паролем приложения. Открытый JSON наружу не уходит.
+  // Старые (открытые) бэкапы читаются без изменений — совместимость.
+  async function _decryptIfNeeded(text) {
+    if (typeof text !== 'string' || text.indexOf('"_enc"') === -1) return text;
+    const wrapper = JSON.parse(text);
+    if (!wrapper || !wrapper._enc) return text;
+    if (typeof LS === 'undefined' || !LS.isAuthorized()) {
+      throw new Error('для расшифровки бэкапа нужен пароль приложения');
+    }
+    return await LS.decryptFromBackup(wrapper._enc);
+  }
+
+  // ── Ручной save (silent=false):
+  //    backup_old              <- предыдущий backup
+  //    logos_backup_YYYY-MM-DD <- исторический (один в сутки, не перезаписывается)
+  //    backup                  <- текущий
+  // ── Автосейв (silent=true):
+  //    autosave_old              <- предыдущий autosave
+  //    autosave                  <- текущий снапшот
   async function _saveInternal(silent) {
     if (_saveLock) {
       if (!silent && typeof flash === 'function') flash('Сохранение уже выполняется...');
@@ -272,7 +293,12 @@ const GDrive = (() => {
     }
     _saveLock = true;
     try {
-      const content = _collectData(silent ? 'autosave' : 'manual');
+      if (typeof LS === 'undefined' || !LS.isAuthorized()) {
+        throw new Error('для зашифрованного бэкапа нужен пароль приложения');
+      }
+      const plain = _collectData(silent ? 'autosave' : 'manual');
+      // Шифруем паролем сессии — в облако уходит только шифртекст.
+      const content = JSON.stringify({ _enc: await LS.encryptForBackup(plain) });
 
       if (silent) {
         // ── Автосейв ─────────────────────────────────────────
@@ -368,7 +394,7 @@ const GDrive = (() => {
         try {
           const file = await _findFile(FILE_BACKUP);
           if (!file) { if (typeof flash === 'function') flash('Бэкап не найден в Drive'); return; }
-          const text = await _readFile(file.id);
+          const text = await _decryptIfNeeded(await _readFile(file.id));
           const d    = JSON.parse(text);
 
           const keys = [
@@ -431,7 +457,7 @@ if (typeof renderCurrent === 'function') renderCurrent();
             if (typeof flash === 'function') flash('Автосейв не найден в Drive');
             return;
           }
-          const text = await _readFile(file.id);
+          const text = await _decryptIfNeeded(await _readFile(file.id));
           const d    = JSON.parse(text);
           const keys = [
             'habits','comp','tasks','permanentTasks','goals','freeGoals','annuals',

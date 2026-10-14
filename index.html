@@ -17,23 +17,19 @@
   // Если тема не задана или задана 'dark' — тёмная (default)
   if(t === 'light') document.documentElement.classList.add('light-init');
 
-  // Применяем шрифт мгновенно до рендера — избегаем мигания
+  // Применяем шрифт мгновенно до рендера — избегаем мигания (единая гарнитура Nunito)
   var FONT_MAP = {
-    'default':  "'DM Sans',sans-serif",
-    'serif':    "'Playfair Display',Georgia,serif",
-    'mono':     "'Roboto Mono',monospace",
-    'dyslexic': "'Lexend',sans-serif"
+    'default':  "'Nunito',sans-serif",
+    'serif':    "'Nunito',sans-serif",
+    'mono':     "'Nunito',sans-serif",
+    'dyslexic': "'Nunito',sans-serif"
   };
-  var MONO_MAP = {
-    'default':  "'DM Mono',monospace",
-    'serif':    "'Playfair Display',Georgia,serif",
-    'mono':     "'Roboto Mono',monospace",
-    'dyslexic': "'Lexend',sans-serif"
-  };
+  var MONO_MAP = FONT_MAP;
   var f = localStorage.getItem('appFont') || 'default';
   try { var fp = JSON.parse(f); if (typeof fp === 'string') f = fp; } catch(e) {} // старые версии писали в JSON-кавычках
   document.documentElement.style.setProperty('--sans', FONT_MAP[f] || FONT_MAP['default']);
   document.documentElement.style.setProperty('--mono', MONO_MAP[f] || MONO_MAP['default']);
+  document.documentElement.style.setProperty('--hd', "'Nunito',sans-serif");
 })();
 </script>
 </head>
@@ -77,7 +73,8 @@
   display:flex;flex-direction:column;align-items:center;gap:20px;
 }
 #splash-logo{
-  font-family:'Bebas Neue',var(--hd,sans-serif);
+  font-family:var(--hd,'Nunito',sans-serif);
+  font-weight:900;
   font-size:clamp(52px,12vw,80px);
   letter-spacing:6px;
   color:var(--a,#2dd4bf);
@@ -104,7 +101,7 @@
   transition:width .05s linear;
 }
 #splash-hint{
-  font-family:var(--mono,'DM Mono',monospace);
+  font-family:var(--mono,'Nunito',sans-serif);
   font-size:10px;
   letter-spacing:2px;
   text-transform:uppercase;
@@ -123,7 +120,7 @@
 }
 #pw-form.show{display:flex}
 #pw-title{
-  font-family:var(--mono,'DM Mono',monospace);
+  font-family:var(--mono,'Nunito',sans-serif);
   font-size:10px;
   letter-spacing:1.5px;
   text-transform:uppercase;
@@ -138,7 +135,7 @@
   padding:0 10px;
   background:none;border:none;border-left:1px solid var(--bd,#242424);
   color:var(--t3,#666);
-  font-family:var(--mono,'DM Mono',monospace);
+  font-family:var(--mono,'Nunito',sans-serif);
   font-size:9px;letter-spacing:1px;text-transform:uppercase;
   cursor:pointer;
 }
@@ -146,7 +143,7 @@
 #pw-inp2{text-align:center;letter-spacing:3px;box-sizing:border-box}
 #pw-err{
   display:none;
-  font-family:var(--mono,'DM Mono',monospace);
+  font-family:var(--mono,'Nunito',sans-serif);
   font-size:10px;letter-spacing:1px;text-transform:lowercase;
   color:#ef4444;
   text-align:center;
@@ -160,7 +157,7 @@
   border:1px solid var(--bd,#242424);
   border-radius:var(--rm,10px);
   color:var(--t2,#a0a0a0);
-  font-family:var(--mono,'DM Mono',monospace);
+  font-family:var(--mono,'Nunito',sans-serif);
   font-size:12px;font-weight:500;
   padding:11px 16px;
   cursor:pointer;
@@ -168,7 +165,7 @@
 }
 #pw-cancel:hover{background:var(--c2,#161616);color:var(--t)}
 #pw-note{
-  font-family:var(--mono,'DM Mono',monospace);
+  font-family:var(--mono,'Nunito',sans-serif);
   font-size:9px;letter-spacing:.5px;line-height:1.7;
   color:var(--t3,#666);
   text-align:center;
@@ -343,10 +340,10 @@
             <svg width="76" height="76" viewBox="0 0 76 76">
               <circle cx="38" cy="38" r="30" fill="none" stroke="var(--c3)" stroke-width="7"/>
               <circle id="today-tasks-ring" cx="38" cy="38" r="30" fill="none" stroke="var(--a)" stroke-width="7" stroke-linecap="round" style="stroke-dasharray:188.5;stroke-dashoffset:188.5;transform:rotate(-90deg);transform-origin:38px 38px;transition:stroke-dashoffset .5s ease"/>
-              <text x="38" y="43" text-anchor="middle" font-family="Bebas Neue,sans-serif" font-size="18" fill="var(--t)" id="today-tasks-ring-txt">0%</text>
+              <text x="38" y="43" text-anchor="middle" font-family="var(--hd,'Nunito',sans-serif)" font-weight="800" font-size="18" fill="var(--t)" id="today-tasks-ring-txt">0%</text>
             </svg>
             <div style="flex:1">
-              <div style="font-family:Bebas Neue,sans-serif;font-size:32px;color:var(--t);line-height:1" id="today-tasks-count">0/0</div>
+              <div style="font-family:var(--hd,'Nunito',sans-serif);font-weight:800;font-size:32px;color:var(--t);line-height:1" id="today-tasks-count">0/0</div>
               <div style="font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:4px">задач выполнено</div>
             </div>
           </div>
@@ -825,27 +822,6 @@
             <div style="display:flex;gap:6px">
               <div id="langRuBtn" onclick="setLang('ru')" style="font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--ab);background:var(--a2);color:var(--a)">РУС</div>
               <div id="langEnBtn" onclick="setLang('en')" style="font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);background:var(--c2);color:var(--t2)">ENG</div>
-            </div>
-          </div>
-          <div class="srow" style="flex-direction:column;align-items:flex-start;gap:10px">
-            <div class="slabel" id="s-font-lbl">Шрифт чата / Chat font</div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%">
-              <div class="font-opt" id="fontOptDefault" onclick="setFont('default')" data-font="default">
-                <div class="font-opt-aa" style="font-family:'DM Sans',sans-serif">Aa</div>
-                <div class="font-opt-name" id="s-font-default">Default</div>
-              </div>
-              <div class="font-opt" id="fontOptSerif" onclick="setFont('serif')" data-font="serif">
-                <div class="font-opt-aa" style="font-family:'Playfair Display',Georgia,serif">Aa</div>
-                <div class="font-opt-name" id="s-font-sans">Serif</div>
-              </div>
-              <div class="font-opt" id="fontOptMono" onclick="setFont('mono')" data-font="mono">
-                <div class="font-opt-aa" style="font-family:'Roboto Mono',monospace">Aa</div>
-                <div class="font-opt-name" id="s-font-system">Mono</div>
-              </div>
-              <div class="font-opt" id="fontOptDyslexic" onclick="setFont('dyslexic')" data-font="dyslexic">
-                <div class="font-opt-aa" style="font-family:'Lexend',sans-serif">Aa</div>
-                <div class="font-opt-name" id="s-font-dyslexic">Dyslexic</div>
-              </div>
             </div>
           </div>
         </div>

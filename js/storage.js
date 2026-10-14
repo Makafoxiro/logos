@@ -109,6 +109,18 @@ const LS = (function () {
     return migrated.length;
   }
 
+  // ── Шифрование для бэкапа (пароль сессии никуда не уходит) ──
+  // Бэкап в Google Drive уходит в облако только в зашифрованном виде:
+  // наружу летит {iv, ct, salt, iterations} — тот же формат, что и appData в IDB.
+  async function encryptForBackup(text) {
+    if (!_masterPassword) throw new Error('Not authorized');
+    return encryptData(text, _masterPassword);
+  }
+  async function decryptFromBackup(blob) {
+    if (!_masterPassword) throw new Error('Not authorized');
+    return decryptData(blob, _masterPassword);
+  }
+
   // Полный сброс: кеш + IndexedDB + localStorage («Сбросить всё»)
   async function reset() {
     if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
@@ -127,6 +139,6 @@ const LS = (function () {
     });
   }
 
-  return { g, s, del, init, flush, authorize, isAuthorized, logout, migrateAndFlush, reset };
+  return { g, s, del, init, flush, authorize, isAuthorized, logout, migrateAndFlush, reset, encryptForBackup, decryptFromBackup };
 })();
 

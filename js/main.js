@@ -1091,16 +1091,16 @@ function setLang(l){
 }
 
 const FONT_MAP={
-  'default':  "'DM Sans',sans-serif",
-  'serif':    "'Playfair Display',Georgia,serif",
-  'mono':     "'Roboto Mono',monospace",
-  'dyslexic': "'Lexend',sans-serif"
+  'default':  "'Nunito',sans-serif",
+  'serif':    "'Nunito',sans-serif",
+  'mono':     "'Nunito',sans-serif",
+  'dyslexic': "'Nunito',sans-serif"
 };
 const MONO_MAP={
-  'default':  "'DM Mono',monospace",
-  'serif':    "'Playfair Display',Georgia,serif",
-  'mono':     "'Roboto Mono',monospace",
-  'dyslexic': "'Lexend',sans-serif"
+  'default':  "'Nunito',sans-serif",
+  'serif':    "'Nunito',sans-serif",
+  'mono':     "'Nunito',sans-serif",
+  'dyslexic': "'Nunito',sans-serif"
 };
 function setFont(f){
   appFont=f;LS.s('appFont',f);

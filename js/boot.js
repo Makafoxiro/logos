@@ -9,21 +9,21 @@
   // классические скрипты шли в порядке вставки, а main.js (бывший module)
   // выполнялся последним — после gdrive.js и aicard.js.
   var SCRIPTS = [
-    'js/utils.js',
-    'js/state.js',
-    'js/health.js',
-    'js/finance.js',
-    'js/routine.js',
-    'js/goals.js',
-    'js/habits.js',
-    'js/skills.js',
-    'js/week.js',
-    'js/memo.js',
-    'js/notifs.js',
-    'js/today.js',
-    'js/gdrive.js',
-    'js/aicard.js',
-    'js/main.js'
+    'js/utils.js?v=3',
+    'js/state.js?v=3',
+    'js/health.js?v=3',
+    'js/finance.js?v=3',
+    'js/routine.js?v=3',
+    'js/goals.js?v=3',
+    'js/habits.js?v=3',
+    'js/skills.js?v=3',
+    'js/week.js?v=3',
+    'js/memo.js?v=3',
+    'js/notifs.js?v=3',
+    'js/today.js?v=3',
+    'js/gdrive.js?v=3',
+    'js/aicard.js?v=3',
+    'js/main.js?v=3'
   ];
 
   function setHint(t) {

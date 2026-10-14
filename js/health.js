@@ -728,7 +728,7 @@ function renderWeightChart(){
 }
 
 // Оригинальный drawLine остаётся для финансовых графиков
-function drawLine(canvas,data,xlabels,labelsEl,forceMin,tMin,tMax){const dpr=window.devicePixelRatio||1;const W=canvas.parentElement.clientWidth||300,H=90;canvas.width=W*dpr;canvas.height=H*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const pad={t:6,r:6,b:3,l:24};const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;ctx.clearRect(0,0,W,H);if(!data.length)return;const minV=forceMin!==undefined?forceMin:Math.max(0,Math.min(...data)-5);const maxV=Math.max(...data)+4;const range=maxV-minV||1;const xStep=cw/(Math.max(data.length-1,1));if(tMin!==undefined){const y1=pad.t+ch-(((tMax-minV)/range)*ch),y2=pad.t+ch-(((tMin-minV)/range)*ch);ctx.fillStyle='rgba(45,212,191,0.07)';ctx.fillRect(pad.l,y1,cw,y2-y1);}for(let i=0;i<=3;i++){const y=pad.t+(ch/3)*i;ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();const v=maxV-((maxV-minV)/3)*i;ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='8px DM Mono,monospace';ctx.textAlign='right';ctx.fillText(Math.round(v*10)/10,pad.l-2,y+3);}const pts=data.map((v,i)=>({x:pad.l+i*xStep,y:pad.t+ch-(((v-minV)/range)*ch)}));ctx.beginPath();ctx.moveTo(pts[0].x,pad.t+ch);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(pts[pts.length-1].x,pad.t+ch);ctx.closePath();ctx.fillStyle='rgba(45,212,191,0.06)';ctx.fill();ctx.beginPath();ctx.strokeStyle='#2dd4bf';ctx.lineWidth=1.5;ctx.lineJoin='round';pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.stroke();pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fillStyle='#2dd4bf';ctx.fill();});if(labelsEl){const step=Math.max(1,Math.ceil(xlabels.length/6));labelsEl.innerHTML=xlabels.filter((_,i)=>i%step===0||i===xlabels.length-1).map(l=>`<div class="lc-lbl">${l}</div>`).join('');}}
+function drawLine(canvas,data,xlabels,labelsEl,forceMin,tMin,tMax){const dpr=window.devicePixelRatio||1;const W=canvas.parentElement.clientWidth||300,H=90;canvas.width=W*dpr;canvas.height=H*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const pad={t:6,r:6,b:3,l:24};const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;ctx.clearRect(0,0,W,H);if(!data.length)return;const minV=forceMin!==undefined?forceMin:Math.max(0,Math.min(...data)-5);const maxV=Math.max(...data)+4;const range=maxV-minV||1;const xStep=cw/(Math.max(data.length-1,1));if(tMin!==undefined){const y1=pad.t+ch-(((tMax-minV)/range)*ch),y2=pad.t+ch-(((tMin-minV)/range)*ch);ctx.fillStyle='rgba(45,212,191,0.07)';ctx.fillRect(pad.l,y1,cw,y2-y1);}for(let i=0;i<=3;i++){const y=pad.t+(ch/3)*i;ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();const v=maxV-((maxV-minV)/3)*i;ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='8px Nunito,sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(v*10)/10,pad.l-2,y+3);}const pts=data.map((v,i)=>({x:pad.l+i*xStep,y:pad.t+ch-(((v-minV)/range)*ch)}));ctx.beginPath();ctx.moveTo(pts[0].x,pad.t+ch);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(pts[pts.length-1].x,pad.t+ch);ctx.closePath();ctx.fillStyle='rgba(45,212,191,0.06)';ctx.fill();ctx.beginPath();ctx.strokeStyle='#2dd4bf';ctx.lineWidth=1.5;ctx.lineJoin='round';pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.stroke();pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fillStyle='#2dd4bf';ctx.fill();});if(labelsEl){const step=Math.max(1,Math.ceil(xlabels.length/6));labelsEl.innerHTML=xlabels.filter((_,i)=>i%step===0||i===xlabels.length-1).map(l=>`<div class="lc-lbl">${l}</div>`).join('');}}
 
 // График веса с ИМТ-раскраской
 function drawWeightLine(canvas,data,xlabels,labelsEl,forceMin,tMin,tMax,bmiColors){
@@ -762,7 +762,7 @@ function drawWeightLine(canvas,data,xlabels,labelsEl,forceMin,tMin,tMax,bmiColor
     {bmi:17,  color:'rgba(249,115,22,0.35)',label:'ИМТ 17'},
     {bmi:16,  color:'rgba(239,68,68,0.35)', label:'ИМТ 16'},
   ];
-  ctx.font='7px DM Mono,monospace';
+  ctx.font='7px Nunito,sans-serif';
   bmiThresholds.forEach(t=>{
     const wAtBmi=t.bmi*h2;
     if(wAtBmi<minV||wAtBmi>maxV)return;
@@ -782,7 +782,7 @@ function drawWeightLine(canvas,data,xlabels,labelsEl,forceMin,tMin,tMax,bmiColor
     ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
     const v=maxV-((maxV-minV)/3)*i;
-    ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font='8px DM Mono,monospace';ctx.textAlign='right';
+    ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font='8px Nunito,sans-serif';ctx.textAlign='right';
     ctx.fillText(Math.round(v*10)/10,pad.l-3,y+3);
   }
 

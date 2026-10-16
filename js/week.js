@@ -8,11 +8,16 @@ function getWeekMonday(offset){
   return mon;
 }
 
-function buildWeek(){
+// opts.keepScroll — пересборка БЕЗ автопрокрутки к сегодняшней карточке:
+// запоминаем scrollLeft и восстанавливаем его (иначе тап по задаче
+// на телефоне прокручивал ленту недели обратно к «сегодня»)
+function buildWeek(opts){
+  const _keepScroll=!!(opts&&opts.keepScroll);
 
   if(typeof rolloverPermanentTasks==='function')rolloverPermanentTasks();
   renderNotificationsPanel();
   const scroll=document.getElementById('weekScroll');
+  const savedLeft=_keepScroll?scroll.scrollLeft:0;
   scroll.innerHTML='';
   const mon=getWeekMonday(weekOffset);
   for(let i=0;i<7;i++){
@@ -24,8 +29,14 @@ function buildWeek(){
     paintCard(card,d);
   }
   updateWNav();
-  // scroll to today if in current week, else scroll to first card
-  if(weekOffset===0){
+  if(_keepScroll){
+    // восстановить позицию без анимации и обновить точки-индикаторы
+    scroll.scrollLeft=savedLeft;
+    const cw=(scroll.querySelector('.day-card')?.offsetWidth||50)+6;
+    curCardIdx=Math.round(scroll.scrollLeft/cw);
+    updateWNav();
+  } else if(weekOffset===0){
+    // scroll to today if in current week, else scroll to first card
     setTimeout(()=>{
       const dow=(new Date().getDay()+6)%7;
       scrollToCard(dow);
@@ -34,13 +45,14 @@ function buildWeek(){
     setTimeout(()=>scrollToCard(0),80);
     curCardIdx=0;
   }
-  // track scroll for dots
+  // track scroll for dots — ТОЛЬКО один обработчик: onscroll-присваивание
+  // заменяет прошлый (addEventListener накапливал слушатели при каждой пересборке)
   scroll.onscroll=null;
-  scroll.addEventListener('scroll',()=>{
+  scroll.onscroll=function(){
     const cw=(scroll.querySelector('.day-card')?.offsetWidth||50)+6;
     curCardIdx=Math.round(scroll.scrollLeft/cw);
     updateWNav();
-  },{passive:true});
+  };
 }
 
 function scrollToCard(idx){
@@ -345,7 +357,9 @@ function rolloverPermanentTasks(){
   }
 }
 function refreshPermanentViews(){
-  if(typeof curPage!=='undefined'&&curPage==='week'&&typeof buildWeek==='function')buildWeek();
+  // keepScroll: пересборка недели без автопрокрутки к сегодняшней карточке —
+  // иначе на телефоне тап по постоянной задаче сдвигал ленту недели
+  if(typeof curPage!=='undefined'&&curPage==='week'&&typeof buildWeek==='function')buildWeek({keepScroll:true});
   if(typeof curPage!=='undefined'&&curPage==='today'&&typeof renderTodayTasks==='function')renderTodayTasks(new Date());
 }
 

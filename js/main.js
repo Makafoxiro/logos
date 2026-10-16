@@ -288,11 +288,34 @@ function goPage(name,btn){
   // Scroll real nav button into center view
   const nav=document.querySelector('.nav');
   if(realBtn&&nav){
-    const btnLeft=realBtn.offsetLeft;
-    const btnW=realBtn.offsetWidth;
-    const navW=nav.offsetWidth;
-    const target=btnLeft-navW/2+btnW/2;
-    nav.scrollTo({left:Math.max(0,target),behavior:'smooth'});
+    // Тап по клону из бесконечной ленты: кнопка уже под пальцем — не перелистываем
+    // (раньше панель ехала к НАСТОЯЩЕЙ кнопке через весь набор и «крутилась по кругу»)
+    const tappedClone=btn&&btn!==realBtn&&btn.dataset&&btn.dataset.navPage;
+    if(!tappedClone){
+      const btnLeft=realBtn.offsetLeft;
+      const btnW=realBtn.offsetWidth;
+      const navW=nav.offsetWidth;
+      let target=btnLeft-navW/2+btnW/2;
+      // Держим цель внутри реального набора кнопок (не в клон-зоне)
+      const sw=nav._setWidth||0;
+      if(sw>0){
+        const minL=sw,maxL=Math.max(minL,2*sw-navW);
+        target=Math.min(Math.max(target,minL),maxL);
+      }
+      target=Math.max(0,target);
+      // Программный smooth-скролл: блокируем телепорт «бесконечности» на время
+      // анимации, иначе прыжок на набор пересекает скролл и лента «зацикливается»
+      if(Math.abs(target-nav.scrollLeft)>2){
+        nav._navLockUntil=Date.now()+1200;
+        if('onscrollend' in nav){
+          // один слушатель на nav: прошлый снимаем, чтобы не копились при серии тапов
+          if(nav._onNavScrollend)nav.removeEventListener('scrollend',nav._onNavScrollend);
+          nav._onNavScrollend=function(){nav._navLockUntil=0;};
+          nav.addEventListener('scrollend',nav._onNavScrollend,{once:true});
+        }
+        nav.scrollTo({left:target,behavior:'smooth'});
+      }
+    }
   }
 }
 
@@ -319,7 +342,9 @@ function goPage(name,btn){
     clone.removeAttribute('id');
     const page=getPage(btn);
     clone.dataset.navPage=page;
-    clone.setAttribute('onclick',"goPage('"+page+"',document.getElementById('nb-"+page+"'))");
+    // Передаём сам клон — goPage увидит data-nav-page и не будет центрировать
+    // навбар (это и вызывало «перелистывание по кругу» при тапе на дальние кнопки)
+    clone.setAttribute('onclick',"goPage('"+page+"',this)");
     return clone;
   }
 
@@ -340,13 +365,36 @@ function goPage(name,btn){
     const cloneBefore=Array.from(nav.children).slice(0,origBtns.length);
     setWidth=cloneBefore.reduce((s,el)=>s+el.offsetWidth,0);
     if(setWidth===0){requestAnimationFrame(measureAndInit);return;}
+    nav._setWidth=setWidth; // для goPage: зажим цели в реальном наборе
     nav.scrollLeft=setWidth;
   }
   requestAnimationFrame(()=>requestAnimationFrame(measureAndInit));
 
+  // Ширина кнопок (white-space:nowrap) может измениться после загрузки
+  // веб-шрифтов или resize — тогда пороги телепорта промахиваются и лента
+  // дёргается рывками. Пересчитываем и сохраняем позицию просмотра.
+  function remeasure(){
+    if(!setWidth)return;
+    const cloneBefore=Array.from(nav.children).slice(0,origBtns.length);
+    const newW=cloneBefore.reduce((s,el)=>s+el.offsetWidth,0);
+    if(!newW||newW===setWidth)return;
+    const sl=nav.scrollLeft;
+    const n=Math.floor(sl/setWidth);            // сколько наборов пролистано
+    const p=sl-n*setWidth;                       // позиция внутри набора
+    const ratio=newW/setWidth;                  // масштаб изменения ширины
+    setWidth=newW;
+    nav._setWidth=newW;
+    nav.scrollLeft=Math.round(n*newW+p*ratio);  // сохраняем позицию просмотра
+  }
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{setTimeout(remeasure,50);});
+  let _remeasureT=null;
+  window.addEventListener('resize',()=>{clearTimeout(_remeasureT);_remeasureT=setTimeout(remeasure,150);});
+
   nav.addEventListener('scroll',()=>{
     if(document.documentElement.classList.contains('modal-open'))return;
     if(jumping||setWidth===0)return;
+    // Программный smooth-скролл (goPage): телепорт посреди анимации «зацикливает» ленту
+    if(nav._navLockUntil&&Date.now()<nav._navLockUntil)return;
     const sl=nav.scrollLeft;
     if(sl<setWidth*0.4){
       jumping=true;

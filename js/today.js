@@ -7,12 +7,15 @@ const HIGHLIGHT_DELAY = 250; // задержка скролла+подсветк
 
 // ── Найти кнопку .nb по ключу страницы (по onclick, не по индексу) ──
 function findNavBtn(pageKey){
-  const all = document.querySelectorAll('.nb');
+  // Только НАСТОЯЩИЕ кнопки: у клонов бесконечной ленты (data-nav-page) onclick
+  // тоже содержит имя страницы, а стоят они впереди — иначе goPage принял бы
+  // клон за «тап пользователя» и не отцентровал навбар при переходе из уведомлений
+  const all = [...document.querySelectorAll('.nb')].filter(b=>!b.dataset.navPage);
   for(let i=0;i<all.length;i++){
     const oc = all[i].getAttribute('onclick')||'';
     if(oc.includes("'"+pageKey+"'") || oc.includes('"'+pageKey+'"')) return all[i];
   }
-  return all[0]; // fallback на первую видимую кнопку
+  return all[0]; // fallback на первую кнопку
 }
 
 // ── Переход на конкретный слайд рутины с подсветкой пункта ─

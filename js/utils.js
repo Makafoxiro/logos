@@ -72,7 +72,13 @@ function closeTaskPopup(){
 }
 document.addEventListener('click',closeTaskPopup,{passive:true});
 
-function getNavBtn(page){return [...document.querySelectorAll('.nb')].find(b=>b.dataset.page===page)||[...document.querySelectorAll('.nb')].find(b=>(b.getAttribute('onclick')||'').includes(page));}
+function getNavBtn(page){
+  // Только НАСТОЯЩИЕ кнопки: у клонов бесконечной ленты (data-nav-page) тоже
+  // остаётся data-page от cloneNode, а стоят они ВПЕРИДИ реальных — find()
+  // иначе возвращал клон, и goPage принимал его за «тап по клону» (без центрирования)
+  const reals=[...document.querySelectorAll('.nb')].filter(b=>!b.dataset.navPage);
+  return reals.find(b=>b.dataset.page===page)||reals.find(b=>(b.getAttribute('onclick')||'').includes(page));
+}
 
 // ── Модальные окна ───────────────────────────────────────
 // Счётчик открытых модалок (для вложенных — напр. фото ДЗ поверх редактирования)

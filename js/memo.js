@@ -244,8 +244,8 @@ function renderMemoBody(){
       });
     }
     // ручные записи + «осиротевшие» привязки (пара удалена из расписания)
-    const manual=homework.filter(h=>!h.pairId||!eduSchedule.some(p=>p.id===h.pairId)||h.week!==weekKey);
-    if(manual.length)html+=`<div class="edu-today-sub">другие задания</div>`;
+    const manual=homework.filter(h=>!h.pairId||!eduSchedule.some(p=>p.id===h.pairId));
+    if(manual.length)html+=`<div class="edu-today-sub">добавлено вручную</div>`;
     if(!manual.length&&!eduSchedule.length)html+=`<div class="edu-empty">пар в расписании нет — добавь их в «УЧЕБА», они перенесутся сюда автоматически</div>`;
     html+=manual.map(hwItemRow).join('');
     div.innerHTML=html;

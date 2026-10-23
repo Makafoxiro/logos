@@ -269,20 +269,21 @@ function renderTodayHW(now){
   const hw=(typeof homework!=='undefined'?homework:[]).filter(h=>{
     if(h.done) return false;
     const t=String(h.task||'').trim();
+    if(!t) return false;                    // пара ещё без задания
     if(skipValues.includes(t)) return false; // «ничего», «-»
-    return Boolean(t||String(h.subj||'').trim());
+    return true;
   });
   if(!hw.length){ block.style.display='none'; return; }
   block.style.display='block';
   if(cnt) cnt.textContent='('+hw.length+')';
   // innerHTML ДО _applyGoalCollapse: иначе раскрытие измеряет высоту пустого/старого списка
   list.innerHTML=hw.map(h=>`
-    <div class="today-item" id="today-hw-${h.id}">
-      <button type="button" class="chk" aria-label="Отметить выполненным" style="background:transparent;padding:0;appearance:none;cursor:pointer" onclick="event.preventDefault();event.stopPropagation();toggleTodayHWDone(${h.id},this.closest('.today-item'))"></button>
+    <div class="today-item" id="today-hw-${h.id}" style="cursor:pointer" onclick="if(!event.target.closest('button'))toggleTodayHWDone(${h.id},this)">
+      <div class="chk" style="flex-shrink:0"></div>
       ${uiIconSvg('book')}
       <div style="flex:1;min-width:0">
         <div style="font-size:14px">${h.subj||''}</div>
-        ${h.task?`<div style="font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:2px">${h.task}</div>`:''}
+        <div style="font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:2px">${h.task||''}</div>
         ${h.date?`<div style="font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:1px">до ${displayDate(h.date)}</div>`:''}
       </div>
       ${arrowBtn('memo','hw-item-'+h.id,'homework')}

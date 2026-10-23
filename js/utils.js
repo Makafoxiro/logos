@@ -17,8 +17,6 @@ const DAYS7=new Proxy([],{
 const DAYS_FULL_RU=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота']; // индекс = getDay() (0=вс)
 const DAYS_FULL_EN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const dayFullName=d=>{const dow=(d instanceof Date)?d.getDay():+d;try{return (appLang==='en'?DAYS_FULL_EN:DAYS_FULL_RU)[dow];}catch(e){return DAYS_FULL_RU[dow];}};
-const EMOJIS=['💪','🧠','📖','🥗','😴','🚫','🎯','⚡','✍️','🧘','🚗','💊','🏃','🎨','🥊','📱','💰','🔑'];
-
 // ══ HELPERS ════════════════════════════════════════════
 const dk  = d=>`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 const mk  = d=>`M${d.getFullYear()}-${d.getMonth()}`;
@@ -27,13 +25,63 @@ const nowMK = ()=>mk(new Date());
 const pct   = (a,b)=>b?Math.round((a/b)*100):0;
 const getMonday = d=>{const r=new Date(d);r.setDate(r.getDate()-((r.getDay()+6)%7));return r;};
 
+function animateCollapse(el,collapsed,display='block',instant=false){
+  if(!el)return;
+  const previous=el._collapseAnimation;
+  const wasHidden=el.style.display==='none';
+  const currentHeight=previous?el.getBoundingClientRect().height:(wasHidden?0:el.getBoundingClientRect().height);
+  const currentOpacity=previous?Number(getComputedStyle(el).opacity):(collapsed?1:0);
+  if(previous)previous.cancel();
+  el._collapseAnimation=null;
+  if(instant||!el.animate||window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    el.style.display=collapsed?'none':display;
+    el.style.height='';
+    el.style.overflow='';
+    el.style.opacity='';
+    el.style.transform='';
+    el.setAttribute('aria-hidden',String(collapsed));
+    return;
+  }
+  if(collapsed&&currentHeight===0){
+    el.style.display='none';
+    el.style.height='';
+    el.style.overflow='';
+    el.style.opacity='';
+    el.style.transform='';
+    el.setAttribute('aria-hidden','true');
+    return;
+  }
+  el.style.display=display;
+  const targetHeight=collapsed?0:el.scrollHeight;
+  const startHeight=wasHidden?0:currentHeight;
+  el.style.height=startHeight+'px';
+  el.style.overflow='hidden';
+  el.setAttribute('aria-hidden',String(collapsed));
+  const animation=el.animate([
+    {height:startHeight+'px',opacity:wasHidden?0:currentOpacity,transform:'translateY('+(collapsed?'-3px':'3px')+')'},
+    {height:targetHeight+'px',opacity:collapsed?0:1,transform:'translateY(0)'}
+  ],{duration:300,easing:'cubic-bezier(.2,.7,.3,1)'});
+  el._collapseAnimation=animation;
+  animation.onfinish=()=>{
+    if(el._collapseAnimation!==animation)return;
+    el._collapseAnimation=null;
+    el.style.display=collapsed?'none':display;
+    el.style.height='';
+    el.style.overflow='';
+    el.style.opacity='';
+    el.style.transform='';
+  };
+}
+
 function updateHeader(){
   document.getElementById('topDate').textContent=displayDate(new Date());
 }
 function flash(msg, duration=2500){const b=document.getElementById('banner');b.textContent=msg;b.style.display='block';clearTimeout(b._flashT);b._flashT=setTimeout(()=>b.style.display='none',duration);}
-function showConfirm(msg, onYes, onNo){
+function showConfirm(msg, onYes, onNo, yesLabel='Сбросить', noLabel='Отмена'){
   document.getElementById('customConfirmMsg').textContent=msg;
   openModal('customConfirm');
+  document.getElementById('customConfirmYes').textContent=yesLabel;
+  document.getElementById('customConfirmNo').textContent=noLabel;
   document.getElementById('customConfirmYes').onclick=()=>{closeModal('customConfirm');if(typeof onYes==='function')onYes();};
   document.getElementById('customConfirmNo').onclick=()=>{closeModal('customConfirm');if(typeof onNo==='function')onNo();};
 }

@@ -59,7 +59,7 @@ function renderPhysCard() {
     physDiseases.forEach(d => {
       html += `<div class="phys-disease" id="pd-${d.id}" onclick="togglePhysDisease(${d.id})">
         <div class="phys-disease-head">
-          <span style="font-size:15px">🩺</span>
+          ${uiIconSvg('stethoscope')}
           <div class="phys-disease-name">${d.name}</div>
           <div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()">
             <button onclick="openPhysCardDiseaseModal(${d.id})" style="background:none;border:none;color:var(--t3);font-size:13px;cursor:pointer;padding:2px 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -138,7 +138,7 @@ function saveHL(h){hLog[nowDK()]=h;LS.s('hLog',hLog);}
 function renderHealth(){
   renderPhysCard();
   const hl=getHL();
-  const macros=[{key:'kcal',label:t('health_kcal'),unit:t('health_kcal_unit')||'ккал',color:'#e2e2e2',cls:'mc-kcal',icon:'⚡',accent:'rgba(226,226,226,0.7)',t:health.kcal},{key:'prot',label:t('health_prot'),unit:'г',color:'#4ade80',cls:'mc-prot',icon:'💪',accent:'rgba(74,222,128,0.8)',t:health.prot},{key:'fat',label:t('health_fat'),unit:'г',color:'#fbbf24',cls:'mc-fat',icon:'🔥',accent:'rgba(251,191,36,0.8)',t:health.fat},{key:'carb',label:t('health_carb'),unit:'г',color:'#60a5fa',cls:'mc-carb',icon:'⚡',accent:'rgba(96,165,250,0.8)',t:health.carb}];
+  const macros=[{key:'kcal',label:t('health_kcal'),unit:t('health_kcal_unit')||'ккал',color:'#e2e2e2',cls:'mc-kcal',icon:'bolt',accent:'rgba(226,226,226,0.7)',t:health.kcal},{key:'prot',label:t('health_prot'),unit:'г',color:'#4ade80',cls:'mc-prot',icon:'dumbbell',accent:'rgba(74,222,128,0.8)',t:health.prot},{key:'fat',label:t('health_fat'),unit:'г',color:'#fbbf24',cls:'mc-fat',icon:'flame',accent:'rgba(251,191,36,0.8)',t:health.fat},{key:'carb',label:t('health_carb'),unit:'г',color:'#60a5fa',cls:'mc-carb',icon:'bolt',accent:'rgba(96,165,250,0.8)',t:health.carb}];
   const mgEl=document.getElementById('macroGrid');
   if(mgEl){
     mgEl.innerHTML=macros.map((m,idx)=>{
@@ -152,7 +152,7 @@ function renderHealth(){
             <div style="font-family:var(--mono);font-size:8px;color:${m.accent};letter-spacing:1.5px;text-transform:uppercase">${m.label}</div>
             <div class="mc-target" style="margin-top:1px">/ ${m.t} ${m.unit}</div>
           </div>
-          <div style="font-size:16px;opacity:.7">${m.icon}</div>
+          <div style="opacity:.7">${uiIconSvg(m.icon)}</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:2px">
           <div id="mcv-${m.key}" class="mc-bigval" style="font-size:38px;color:${overNorm?'var(--red)':m.color};line-height:1;text-shadow:0 0 14px ${m.color}44">${val}</div>
@@ -166,9 +166,9 @@ function renderHealth(){
   }
   // ── МИКРОНУТРИЕНТЫ ──────────────────────────────────
   const micros=[
-    {key:'fiber',label:t('health_fiber'),unit:'г',color:'#34d399',cls:'mc-fiber',icon:'🌿',accent:'rgba(52,211,153,0.8)',t:health.fiber||30},
-    {key:'sugar',label:t('health_sugar'),unit:'г',color:'#f472b6',cls:'mc-sugar',icon:'🍬',accent:'rgba(244,114,182,0.8)',t:health.sugar||50},
-    {key:'salt',label:t('health_salt'),unit:'г',color:'#fb923c',cls:'mc-salt',icon:'🧂',accent:'rgba(251,146,60,0.8)',t:health.salt||5}
+    {key:'fiber',label:t('health_fiber'),unit:'г',color:'#34d399',cls:'mc-fiber',icon:'leaf',accent:'rgba(52,211,153,0.8)',t:health.fiber||30},
+    {key:'sugar',label:t('health_sugar'),unit:'г',color:'#f472b6',cls:'mc-sugar',icon:'sparkles',accent:'rgba(244,114,182,0.8)',t:health.sugar||50},
+    {key:'salt',label:t('health_salt'),unit:'г',color:'#fb923c',cls:'mc-salt',icon:'salt',accent:'rgba(251,146,60,0.8)',t:health.salt||5}
   ];
   const mgEl2=document.getElementById('microGrid');
   if(mgEl2){
@@ -184,7 +184,7 @@ function renderHealth(){
             <div style="font-family:var(--mono);font-size:8px;color:${m.accent};letter-spacing:1.5px;text-transform:uppercase">${m.label}</div>
             <div style="font-family:var(--mono);font-size:8px;margin-top:1px" class="mc-target">/ ${m.t} ${m.unit}</div>
           </div>
-          <div style="font-size:16px;opacity:.7">${m.icon}</div>
+          <div style="opacity:.7">${uiIconSvg(m.icon)}</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:2px">
           <div id="mcv-${m.key}" class="mc-bigval" style="font-size:38px;color:${overNorm?'var(--red)':m.color};line-height:1;text-shadow:0 0 14px ${m.color}44">${val}</div>
@@ -228,7 +228,7 @@ function renderHealth(){
   }
   const sgEl=document.getElementById('suppGrid');if(sgEl)sgEl.innerHTML=supps.map((s,si)=>{const taken=!!(hl.supps&&hl.supps[s.name]);const descId='suppDesc-'+si;return`<div class="supp-item${taken?' taken':''}" onclick="toggleSupp('${s.name}')"><div class="supp-chk">${taken?'✓':''}</div><div style="flex:1;min-width:0"><div class="supp-name">${s.name}</div>${s.desc?`<div id="${descId}" class="supp-desc-text" style="display:none;font-size:11px;color:var(--t3);margin-top:2px;line-height:1.4">${s.desc}</div>`:'' }</div>${s.desc?`<button class="supp-del" onclick="event.stopPropagation();var el=document.getElementById('${descId}');el.style.display=el.style.display==='none'?'block':'none'" title="Описание">▾</button>`:''}<button class="supp-del" onclick="event.stopPropagation();openSuppEdit('${s.name}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div>`;}).join('');
   const medEl=document.getElementById('medGrid');if(medEl)medEl.innerHTML=meds.map(m=>`<div class="supp-item" style="cursor:default;background:var(--c2);border-color:rgba(167,139,250,0.2)">
-    <div style="font-size:16px;flex-shrink:0">💊</div>
+    ${uiIconSvg('capsule')}
     <div style="flex:1">
       <div style="font-size:13px;color:var(--t)">${escHtml(m.name)}</div>
       <div style="font-family:var(--mono);font-size:10px;color:rgba(167,139,250,0.8);margin-top:2px">${escHtml(m.use)}</div>
@@ -386,7 +386,7 @@ function addNapSession(){
   row.className='nap-row';
   row.style.cssText='display:flex;align-items:center;gap:8px;margin-top:8px';
   const inpStyle='background:rgba(255,255,255,0.06);border:1px solid rgba(99,130,210,0.25);border-radius:7px;color:var(--t);font-family:var(--mono);font-size:13px;padding:5px 9px;outline:none';
-  row.innerHTML=`<span style="font-size:11px;color:var(--t2)">😴</span>`+
+  row.innerHTML=uiIconSvg('moon')+
     `<input type="time" class="nap-bed" value="14:00" style="${inpStyle}" oninput="updateSleepSchedule()">`+
     `<span style="font-size:11px;color:var(--t2)">→</span>`+
     `<input type="time" class="nap-wake" value="15:00" style="${inpStyle}" oninput="updateSleepSchedule()">`+
@@ -404,7 +404,7 @@ function initNapSessions(){
     row.className='nap-row';
     row.style.cssText='display:flex;align-items:center;gap:8px;margin-top:8px';
     const inpStyle='background:rgba(255,255,255,0.06);border:1px solid rgba(99,130,210,0.25);border-radius:7px;color:var(--t);font-family:var(--mono);font-size:13px;padding:5px 9px;outline:none';
-    row.innerHTML=`<span style="font-size:11px;color:var(--t2)">😴</span>`+
+    row.innerHTML=uiIconSvg('moon')+
       `<input type="time" class="nap-bed" value="${n.bed}" style="${inpStyle}" oninput="updateSleepSchedule()">`+
       `<span style="font-size:11px;color:var(--t2)">→</span>`+
       `<input type="time" class="nap-wake" value="${n.wake}" style="${inpStyle}" oninput="updateSleepSchedule()">`+

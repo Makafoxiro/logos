@@ -9,8 +9,8 @@ function showAICardChoice(action) {
   const titleEl    = document.getElementById('aiCardChoiceTitle');
   const subEl      = document.getElementById('aiCardChoiceSubtitle');
   const isEN_m = (typeof appLang !== 'undefined') && appLang === 'en';
-  const Lm = isEN_m ? {dl:'Download AI card',cp:'Copy AI card',sub:'Choose export mode',full:'📄 Full',base:'⚡ Base',baseDesc:'no media & checklists',cancel:'Cancel'}
-                    : {dl:'Скачать AI-карту',cp:'Копировать AI-карту',sub:'Выберите режим экспорта',full:'📄 Полное',base:'⚡ Базовое',baseDesc:'без медиа и чеклистов',cancel:'Отмена'};
+  const Lm = isEN_m ? {dl:'Download AI card',cp:'Copy AI card',sub:'Choose export mode',full:'Full',base:'Base',baseDesc:'no media & checklists',cancel:'Cancel'}
+                    : {dl:'Скачать AI-карту',cp:'Копировать AI-карту',sub:'Выберите режим экспорта',full:'Полное',base:'Базовое',baseDesc:'без медиа и чеклистов',cancel:'Отмена'};
   if (titleEl) titleEl.textContent = isDownload ? Lm.dl : Lm.cp;
   if (subEl)   subEl.textContent   = Lm.sub;
 
@@ -146,6 +146,10 @@ function buildAICard(mode) {
   const watchlist    = g('watchlist', []);
   const birthdays    = g('birthdays', []);
   const homework     = g('homework', []);
+  const eduSubjectsA = g('eduSubjects', []);
+  const eduScheduleA = g('eduSchedule', []);
+  const eduLinksA    = g('eduLinks', []);
+  const eduBellsA    = g('eduBells', []);
   const sleepSchedule = g('sleepSchedule', {bed:'23:00', wake:'05:00', naps:[]});
   const aiProfile    = g('aiProfile', {});  // ручные поля из настроек
   const hLog         = g('hLog', {});       // факт питания/сна по дням
@@ -164,8 +168,8 @@ function buildAICard(mode) {
     sProfile:'PROFILE', sPhysical:'PHYSICAL DATA', sSupplements:'SUPPLEMENTS & MEDICINE',
     sWorkouts:'WORKOUTS', sRoutine:'ROUTINE', sHabits:'HABITS', sGoals:'GOALS',
     sInterests:'INTERESTS', sFinance:'FINANCE', sNotes:'NOTES',
-    sHomework:'HOMEWORK', sWatchlist:'WATCHLIST',
-    sBirthdays:'BIRTHDAYS', sWarnings:'⚠️ WARNINGS & CONTRADICTIONS',
+    sHomework:'HOMEWORK', sWatchlist:'WATCHLIST', sStudy:'STUDY (SCHEDULE, SUBJECTS, LINKS)',
+    sBirthdays:'LINKS', sWarnings:'WARNINGS & CONTRADICTIONS',
     // subsections
     ssProfile:'Additional context', ssNutrition:'Nutrition norms',
     ssFoodLog:'Actual nutrition & sleep (recent days)', ssConditions:'Conditions / Restrictions (consider when advising)',
@@ -184,7 +188,7 @@ function buildAICard(mode) {
     days:'d.', today:'today', todayDeadline:'deadline today!',
     overdueDays:'overdue', throughDays:'in',
     income:'Income', expense:'Expense', total:'Total',
-    deficit:' rub. ⚠️ DEFICIT', surplus:' rub. ✓',
+    deficit:' rub. DEFICIT', surplus:' rub. ✓',
     budget:'Monthly budget (limit)',
     debtOwe:'← I owe', debtOwed:'→ Owed to me',
     noPhyTpl:'Workouts: no physical templates.',
@@ -207,11 +211,11 @@ function buildAICard(mode) {
     // annual period labels
     every3m:'every 3 mo.', every6m:'every 6 mo.', everyYears:'every {n} years',
     // birthday
-    bdToday:' 🎉 TODAY!', bdSoon:' ← in {n} d.',
-    bdYears:' ({n} y.o.)', bdGift:'🎁 ideas: ',
+    bdToday:' TODAY!', bdSoon:' ← in {n} d.',
+    bdYears:' ({n} y.o.)', bdGift:'ideas: ',
     // modal
     modalDownloadTitle:'Download AI card', modalCopyTitle:'Copy AI card',
-    modalSub:'Choose export mode', modalFull:'📄 Full', modalBase:'⚡ Base',
+    modalSub:'Choose export mode', modalFull:'Full', modalBase:'Base',
     modalBaseDesc:'no media & checklists', modalCancel:'Cancel',
     // warnings
     warnBudget:'Budget: expenses exceed income by {n} per month.',
@@ -226,9 +230,9 @@ function buildAICard(mode) {
     sProfile:'ПРОФИЛЬ', sPhysical:'ФИЗИЧЕСКИЕ ДАННЫЕ', sSupplements:'ДОБАВКИ И АПТЕЧКА',
     sWorkouts:'ТРЕНИРОВКИ', sRoutine:'РУТИНА', sHabits:'ПРИВЫЧКИ', sGoals:'ЦЕЛИ',
     sInterests:'ИНТЕРЕСЫ', sFinance:'ФИНАНСЫ', sNotes:'ЗАМЕТКИ',
-    sHomework:'ДОМАШНИЕ ЗАДАНИЯ',
-    sWatchlist:'ВОТЧЛИСТ / К ПРОСМОТРУ', sBirthdays:'ДНИ РОЖДЕНИЯ',
-    sWarnings:'⚠️ ПРОТИВОРЕЧИЯ И ПРЕДУПРЕЖДЕНИЯ',
+    sHomework:'ДОМАШНИЕ ЗАДАНИЯ', sStudy:'УЧЕБА (РАСПИСАНИЕ, ПРЕДМЕТЫ, ССЫЛКИ)',
+    sWatchlist:'ВОТЧЛИСТ / К ПРОСМОТРУ', sBirthdays:'СВЯЗИ',
+    sWarnings:'ПРОТИВОРЕЧИЯ И ПРЕДУПРЕЖДЕНИЯ',
     ssProfile:'Доп. контекст', ssNutrition:'Нормы питания',
     ssFoodLog:'Факт питания и сна (последние дни)', ssConditions:'Состояния / Ограничения (учитывать при советах)',
     ssBads:'БАДы / Добавки', ssMeds:'Аптечка',
@@ -245,7 +249,7 @@ function buildAICard(mode) {
     days:'дн.', today:'сегодня', todayDeadline:'сегодня сдать!',
     overdueDays:'просрочено', throughDays:'через',
     income:'Доход', expense:'Расход', total:'Итог',
-    deficit:' руб. ⚠️ ДЕФИЦИТ', surplus:' руб. ✓',
+    deficit:' руб. ДЕФИЦИТ', surplus:' руб. ✓',
     budget:'Месячный бюджет (лимит)',
     debtOwe:'← Я должен', debtOwed:'→ Мне должны',
     noPhyTpl:'Тренировки: нет ни одного физического шаблона.',
@@ -265,10 +269,10 @@ function buildAICard(mode) {
     cycleStart:'Старт цикла', pattern:'Паттерн', today2:'Сегодня', cycleFirstWeek:'Первая неделя цикла',
     heavy:'тяжёлая', light:'лёгкая', restDay:'Отдых',
     every3m:'каждые 3 мес.', every6m:'каждые 6 мес.', everyYears:'каждые {n} лет',
-    bdToday:' 🎉 СЕГОДНЯ!', bdSoon:' ← через {n} дн.',
-    bdYears:' ({n} лет)', bdGift:'🎁 идеи: ',
+    bdToday:' СЕГОДНЯ!', bdSoon:' ← через {n} дн.',
+    bdYears:' ({n} лет)', bdGift:'идеи: ',
     modalDownloadTitle:'Скачать AI-карту', modalCopyTitle:'Копировать AI-карту',
-    modalSub:'Выберите режим экспорта', modalFull:'📄 Полное', modalBase:'⚡ Базовое',
+    modalSub:'Выберите режим экспорта', modalFull:'Полное', modalBase:'Базовое',
     modalBaseDesc:'без медиа и чеклистов', modalCancel:'Отмена',
     warnBudget:'Бюджет: расходы превышают доходы на {n} руб./мес.',
     warnWeight:'Вес: {n} запис(и) с аномальным значением — проверь данные.',
@@ -487,7 +491,7 @@ function buildAICard(mode) {
                         : (Array.isArray(t.exercisesNone) && t.exercisesNone.length) ? t.exercisesNone : [];
             exArr.forEach(ex => lines.push(`    - ${ex}`));
           }
-          if (t.desc && t.desc.trim()) lines.push(`    📝 ${t.desc.trim()}`);
+          if (t.desc && t.desc.trim()) lines.push(`    · ${t.desc.trim()}`);
         });
       }
 
@@ -499,7 +503,7 @@ function buildAICard(mode) {
           if (Array.isArray(t.exercises) && t.exercises.length) {
             t.exercises.forEach(ex => lines.push(`    - ${ex}`));
           }
-          if (t.desc && t.desc.trim()) lines.push(`    📝 ${t.desc.trim()}`);
+          if (t.desc && t.desc.trim()) lines.push(`    · ${t.desc.trim()}`);
         });
       }
     }
@@ -562,7 +566,7 @@ function buildAICard(mode) {
     h1(L.sHabits);
     activeHabits.forEach(h => {
       const desc = h.desc ? ` — ${h.desc}` : '';
-      li(`${h.emoji || ''}${h.name}${desc}`);
+      li(`${habitIconLabel(h.icon) ? '['+habitIconLabel(h.icon)+'] ' : ''}${h.name}${desc}`);
     });
   }
 
@@ -633,8 +637,7 @@ function buildAICard(mode) {
     intCats.forEach(cat => {
       const catItems = intItems.filter(i => i.catId === cat.id);
       if (!catItems.length) return;
-      const title = (cat.emoji ? cat.emoji + ' ' : '') + cat.name;
-      h2(title);
+      h2(cat.name);
       catItems.forEach(item => {
         const note = item.note ? ` — ${item.note}` : '';
         li(`${item.name}${note}`);
@@ -645,9 +648,11 @@ function buildAICard(mode) {
   // ── Финансы ───────────────────────────────────────────
   const finBudget    = g('finBudget', 0);
   const finPieSlices = g('finPieSlices', []);
+  const finPieSum    = g('finPieSum', 0);
   const hasFinance = (finTpl.week?.income?.length || finTpl.week?.expense?.length ||
     finTpl.month?.income?.length || finTpl.month?.expense?.length ||
     finTpl.month3?.income?.length || finTpl.month3?.expense?.length ||
+    finTpl.halfYear?.income?.length || finTpl.halfYear?.expense?.length ||
     finTpl.year?.income?.length || finTpl.year?.expense?.length ||
     finDebts.length || finPurchases.length || finBudget > 0);
 
@@ -662,6 +667,8 @@ function buildAICard(mode) {
       ['Еженедельные расходы', finTpl.week?.expense],
       ['Доход раз в 3 месяца', finTpl.month3?.income],
       ['Расход раз в 3 месяца', finTpl.month3?.expense],
+      ['Доход раз в полгода', finTpl.halfYear?.income],
+      ['Расход раз в полгода', finTpl.halfYear?.expense],
       ['Годовой доход', finTpl.year?.income],
       ['Годовые расходы', finTpl.year?.expense],
     ];
@@ -700,7 +707,8 @@ function buildAICard(mode) {
       h2(L.ssBudgetCats);
       activePie.forEach(s => {
         const desc = s.desc ? ` — ${s.desc}` : '';
-        li(`${s.name}: ${s.pct}%${desc}`);
+        const amount=finPieSum>0?` · ${Math.round(finPieSum*s.pct/100).toLocaleString('ru-RU')} руб.`:'';
+        li(`${s.name}: ${s.pct}%${amount}${desc}`);
       });
     }
 
@@ -763,6 +771,47 @@ function buildAICard(mode) {
     });
   }
 
+  // ── Учёба: расписание, предметы, ссылки ────────────────
+  if ((eduScheduleA || []).length || (eduSubjectsA || []).length || (eduLinksA || []).length || (eduBellsA || []).length) {
+    h1(L.sStudy);
+    const parLblRu = { num: 'числитель', den: 'знаменатель' };
+    const parLblEn = { num: 'numerator week', den: 'denominator week' };
+    if ((eduScheduleA || []).length) {
+      for (let d = 0; d < 7; d++) {
+        const dayPairs = eduScheduleA.filter(p => +p.day === d).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+        if (!dayPairs.length) continue;
+        const dayName = (isEN ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'])[d];
+        dayPairs.forEach((p, i) => {
+          const bits = [];
+          if (p.time) bits.push(p.time);
+          bits.push(p.name);
+          if (p.teacher) bits.push(isEN ? `teacher: ${p.teacher}` : `преподаватель: ${p.teacher}`);
+          if (p.corpus) bits.push(isEN ? `building ${p.corpus}` : `корп. ${p.corpus}`);
+          if (p.room) bits.push(p.room);
+          if (p.parity && p.parity !== 'both') bits.push((isEN ? parLblEn : parLblRu)[p.parity] || '');
+          li(`${i === 0 ? dayName + ': ' : '   '}${bits.filter(Boolean).join(' — ')}`);
+        });
+      }
+    }
+    if ((eduBellsA || []).length) {
+      const bellDayRu = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+      const bellDayEn = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      const bellDays = isEN ? bellDayEn : bellDayRu;
+      li(isEN ? 'Bells schedule:' : 'Звонки:');
+      for (let d = 0; d < 7; d++) {
+        const dayBells = eduBellsA.filter(b => +b.day === d).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+        if (!dayBells.length) continue;
+        dayBells.forEach((b, i) => li(`${i === 0 ? bellDays[d] + ': ' : '   '}${b.time}${b.name ? ` — ${b.name}` : ''}`));
+      }
+    }
+    if ((eduSubjectsA || []).length) {
+      eduSubjectsA.forEach(s => li(`${s.name}${s.teacher ? (isEN ? ` — teacher: ${s.teacher}` : ` — преподаватель: ${s.teacher}`) : ''}`));
+    }
+    if ((eduLinksA || []).length) {
+      eduLinksA.forEach(l => li(`${l.title}: ${l.url}`));
+    }
+  }
+
   // ── Вотчлист ──────────────────────────────────────────
   // В базовом режиме пропускаем медиалист
   const activeWatch = isBase ? [] : watchlist.filter(w => w.status !== 'done');
@@ -812,9 +861,13 @@ function buildAICard(mode) {
         const soon = days === 0 ? L.bdToday : days <= 7 ? L.bdSoon.replace('{n}', days) : '';
         info = ` — ${displayDate(b.date,{noYear:true})}${bdAge}${soon}`;
       }
+      let meta = '';
+      if (b.rel)  meta += ` (${b.rel})`;
+      if (b.phone) meta += ` · ${b.phone}`;
+      if (b.note) meta += ` · ${b.note}`;
       const gifts = (b.gifts || []);
       const giftStr = gifts.length ? ` | ${L.bdGift}${gifts.join(', ')}` : '';
-      li(`${b.name}${info}${giftStr}`);
+      li(`${b.name}${meta}${info}${giftStr}`);
     });
   }
 

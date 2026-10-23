@@ -216,7 +216,8 @@ function renderRoutine(){
     </div>`;
   }
 
-  // ── СЛАЙД «ЕЖЕДНЕВНОЕ»: слот → день недели → пункты ──
+  // ── СЛАЙД «ЕЖЕДНЕВНОЕ»: слоты УТРО/ДЕНЬ/ВЕЧЕР → плоский список пунктов ──
+  // Каждый пункт один раз; дни недели показаны бейджем справа (.rt-days).
   const WDAYS_RU2=DAYS7;
   function dailySlideHTML(){
     const todayDow=(new Date().getDay()+6)%7;
@@ -238,24 +239,28 @@ function renderRoutine(){
         const gLog=routineLog[keyForDow(di)]||{};
         return slotItems.some(x=>isRtDone(sl.key,x.name,gLog[sl.key]));
       });
-      const dayGroups=WDAYS_RU2.map((dl,di)=>({label:dl,dow:di,dateKey:keyForDow(di),items:slotItems.filter(x=>x.days.includes(di))}))
-        .filter(g=>g.items.length);
-      const bodyHTML=dayGroups.length ? dayGroups.map(g=>{
-        const today=(g.dow===todayDow);
-        const gLog=routineLog[g.dateKey]||{};
-        const itemsHTML=g.items.map(x=>{
-          const realIdx=(routine.daily||[]).indexOf(x);
-          const dn=isRtDone(sl.key,x.name,gLog[sl.key]);
-          // бейдж дней — только если пункт привязан не к одному дню
-          const badge=(x.days.length>1)?`<div style="font-family:var(--mono);font-size:8px;color:var(--t3);border:1px solid var(--bd);border-radius:5px;padding:2px 4px;margin-right:6px;white-space:nowrap">${x.days.map(d=>WDAYS_RU2[d]).join(' ')}</div>`:'';
-          return `
+      // Плоский список: каждый пункт ОДИН раз, дни недели — бейджем справа
+      // (раньше пункт дублировался под каждым днём, к которому был привязан)
+      const todayLog=(routineLog[nowDK()]||{})[sl.key]||{};
+      const bodyHTML=slotItems.length ? `<div class="rt-items">${slotItems.map(x=>{
+        const realIdx=(routine.daily||[]).indexOf(x);
+        const scheduledToday=x.days.includes(todayDow);
+        const dn=scheduledToday && !!todayLog[x.name];
+        // бейдж дней: 7 дней → «ежедневно», иначе список; сегодняшний день — цветом слота
+        const sortedDays=[...x.days].sort((a,b)=>a-b);
+        const badgeTxt = sortedDays.length>=7
+          ? 'ежедневно'
+          : sortedDays.map(d=>d===todayDow
+              ? `<span style="color:${sl.color}">${WDAYS_RU2[d]}</span>`
+              : WDAYS_RU2[d]).join(' ');
+        return `
         <div class="rt-item${dn?' done':''}"
-          id="rt-item-${sl.key}-${g.dow}-${realIdx}"
+          id="rt-item-${sl.key}-${realIdx}"
           data-block="_daily" data-idx="${realIdx}"
           ondragover="rtDragOver(event,this)"
           ondragleave="rtDragLeave(this)"
           ondrop="rtDropDaily(${realIdx},event)"
-          onclick="toggleDailyRt(${realIdx},'${g.dateKey}')">
+          onclick="toggleDailyRt(${realIdx})">
           <div class="rt-drag"
             draggable="true"
             ondragstart="rtDragStart('_daily',${realIdx},this.parentElement);event.stopPropagation()"
@@ -265,27 +270,20 @@ function renderRoutine(){
             ontouchend="rtTouchEndDaily(event)"
             onclick="event.stopPropagation()">⠿</div>
           <div class="rt-chk">${dn?'✓':''}</div>
-          ${badge}<div class="rt-name">${x.name}</div>
+          <div class="rt-name">${x.name}</div>
+          <div class="rt-days">${badgeTxt}</div>
           <button class="rt-edit" onclick="event.stopPropagation();openRtEditModal('daily',null,${realIdx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         </div>`;
-        }).join('');
-        return `<div style="margin-bottom:6px">
-          <div style="display:flex;align-items:center;gap:6px;padding:6px 2px 4px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:${today?'var(--a)':'var(--t3)'}">${g.label.toUpperCase()}${today?' · СЕГОДНЯ':''}</div>
-            <div style="flex:1;height:1px;background:var(--bd)"></div>
-          </div>
-          <div class="rt-items">${itemsHTML}</div>
-        </div>`;
-      }).join('') : '<div style="font-size:12px;color:var(--t3);font-family:var(--mono);padding:8px 0">пусто — добавь пункт</div>';
+      }).join('')}</div>` : '<div style="font-size:12px;color:var(--t3);font-family:var(--mono);padding:8px 0">пусто — добавь пункт</div>';
       return `<div class="rt-block">
         <div class="rt-head">
           <div class="rt-title" style="color:${sl.color}">${sl.label}</div>
           <div style="display:flex;align-items:center;gap:8px">
             ${anyDone?`<button onclick="resetRtBlock('${sl.key}')" style="background:none;border:none;font-family:var(--mono);font-size:8px;color:var(--t3);cursor:pointer;padding:2px 6px;border-radius:5px;border:1px solid var(--bd)">↺ сброс</button>`:''}
-            <div onclick="toggleDailyGroup('${sl.key}')" style="font-size:12px;color:var(--t3);cursor:pointer;padding:2px 6px;user-select:none">${collapsed?'▸':'▾'}</div>
+            <div class="rt-daily-toggle" onclick="toggleDailyGroup('${sl.key}')" style="font-size:12px;color:var(--t3);cursor:pointer;padding:2px 6px;user-select:none">${collapsed?'▸':'▾'}</div>
           </div>
         </div>
-        ${collapsed?'':`<div>${bodyHTML}</div>`}
+        <div class="rt-daily-content" data-slot="${sl.key}"${collapsed?' style="display:none"':''}>${bodyHTML}</div>
       </div>`;
     }).join('');
     return `<div>
@@ -420,10 +418,10 @@ function renderRoutine(){
       // Overdue banner with action button
       const overdueBanner=isOverdue&&a.period?`
         <div style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-family:var(--mono);font-size:10px;color:var(--red);flex:1">⚠ просрочено на ${Math.abs(days)}д.</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--red);flex:1">${uiIconSvg('alert')} просрочено на ${Math.abs(days)}д.</span>
           <button onclick="annualMarkDone(${a.id})" style="background:var(--a);border:none;border-radius:6px;color:#000;font-family:var(--mono);font-size:10px;padding:4px 10px;cursor:pointer;white-space:nowrap">✓ сделал — сдвинуть</button>
         </div>`:
-        (isOverdue&&!a.period?`<div style="font-family:var(--mono);font-size:10px;color:var(--red);padding-left:16px">⚠ дата прошла</div>`:'');
+        (isOverdue&&!a.period?`<div style="font-family:var(--mono);font-size:10px;color:var(--red);padding-left:16px">${uiIconSvg('alert')} дата прошла</div>`:'');
 
       return `<div id="annual-item-${a.id}" style="background:var(--c1);border:1px solid ${isOverdue?'rgba(248,113,113,0.3)':isSoon?'rgba(251,191,36,0.2)':'var(--bd)'};border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;align-items:center;gap:8px">
@@ -572,7 +570,12 @@ let _dailyCollapsed={morning:true,day:true,evening:true};
 
 function toggleDailyGroup(slot){
   _dailyCollapsed[slot]=!_dailyCollapsed[slot];
-  renderRoutine();
+  const content=document.querySelector(`.rt-daily-content[data-slot="${slot}"]`);
+  const block=content?.closest('.rt-block');
+  if(!content||!block){renderRoutine();return;}
+  const toggle=block.querySelector('.rt-daily-toggle');
+  animateCollapse(content,_dailyCollapsed[slot],'block');
+  if(toggle)toggle.textContent=_dailyCollapsed[slot]?'▸':'▾';
 }
 
 function toggleDailyRt(realIdx,dateKey){

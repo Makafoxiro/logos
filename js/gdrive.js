@@ -94,13 +94,13 @@ const GDrive = (() => {
     const authBtn  = document.getElementById('gdriveAuthBtn');
     if (!statusEl) return;
     if (authed) {
-      statusEl.textContent = tr('gdrive-connected', '🟢 Подключено');
+      statusEl.textContent = tr('gdrive-connected', 'Подключено');
       if (authBtn) authBtn.textContent = tr('gdrive-refresh', 'ОБНОВИТЬ');
       if (syncRow) syncRow.style.display = 'block';
       _showReconnectBanner(false);
     } else {
-      statusEl.textContent = tr('gdrive-disconnected', '🔴 Не подключено');
-      if (authBtn) authBtn.textContent = tr('gdrive-signin', 'ВОЙТИ');
+      statusEl.textContent = tr('gdrive-disconnected', 'Не подключено');
+      if (authBtn) authBtn.textContent = tr('gdrive-signin', 'Войти');
       if (syncRow) syncRow.style.display = 'none';
     }
     const lastSave = localStorage.getItem('gdrive_last_save');
@@ -224,12 +224,23 @@ const GDrive = (() => {
       homework:       g('homework', []),
       notes:          g('notes', []),
       watchlist:      g('watchlist', []),
+      eduSchedule:    g('eduSchedule', []),
+      eduSubjects:    g('eduSubjects', []),
+      eduLinks:       g('eduLinks', []),
+      eduWeekParity:  g('eduWeekParity', 'num'),
+      eduWeekAnchor:  g('eduWeekAnchor', ''),
+      eduBells:      g('eduBells', []),
       skillTemplates: g('sportTemplates', []),
       finLog:         g('finLog', {}),
       finTpl:         g('finTpl', {}),
+      finPlans:       g('finPlans', {}),
+      finCapital0:    g('finCapital0', 0),
       finPurchases:   g('finPurchases', []),
       finDebts:       g('finDebts', []),
+      finAssets:      g('finAssets', []),
+      finAssetHistory:g('finAssetHistory', []),
       finPieSlices:   g('finPieSlices', []),
+      finPieSum:      g('finPieSum', 0),
       physDiseases:   g('physDiseases', []),
       physParams:     g('physParams', []),
       mentalParams:   g('mentalParams', []),
@@ -242,6 +253,7 @@ const GDrive = (() => {
       notifCfg:        g('notifCfg', {}),
       remindersCfg:    g('remindersCfg', {}),
       interests:       g('interests', { cats: [], items: [] }),
+      aiProfile:       g('aiProfile', {}),
       finBudget:       g('finBudget', 0),
       sleepRem:        g('sleepRem', { on: false, time: '22:30' }),
       appTheme:        g('appTheme', 'dark'),
@@ -329,7 +341,7 @@ const GDrive = (() => {
       localStorage.setItem('gdrive_last_save', saveTime);
       _updateUI();
       if (typeof flash === 'function') {
-        flash(silent ? '☁ Автосейв в Drive' : '✓ Сохранено в Google Drive');
+        flash(silent ? 'Автосейв в Drive' : '✓ Сохранено в Google Drive');
       }
     } catch (e) {
       if (!silent && typeof flash === 'function') flash('Ошибка сохранения: ' + e.message);
@@ -402,8 +414,10 @@ const GDrive = (() => {
             'routine','routineLog','weekRtLog','monthRtLog','yearRtLog',
             'tplDone','habEnabled','health','hLog','supps','meds',
             'weights','birthdays','homework','notes','watchlist',
-            'skillTemplates','finLog','finTpl','finPurchases','finDebts',
-            'finPieSlices','physDiseases','nid',
+            'eduSchedule','eduSubjects','eduLinks','eduWeekParity','eduBells','eduWeekAnchor',
+            'skillTemplates','finLog','finTpl','finPlans','finCapital0',
+            'finPurchases','finDebts','finAssets','finAssetHistory',
+            'finPieSlices','finPieSum','physDiseases','nid',
             // Новые раздельные ключи
             'physParams','mentalParams'
           ];
@@ -421,6 +435,7 @@ const GDrive = (() => {
           if (d.notifCfg       !== undefined) { LS.s('notifCfg',       d.notifCfg); }
           if (d.remindersCfg   !== undefined) { LS.s('remindersCfg',   d.remindersCfg); }
           if (d.interests      !== undefined) { LS.s('interests',      d.interests); }
+          if (d.aiProfile      !== undefined) { LS.s('aiProfile',      d.aiProfile); }
           if (d.finBudget      !== undefined) { LS.s('finBudget',      d.finBudget); }
           if (d.sleepRem       !== undefined) { LS.s('sleepRem',       d.sleepRem); }
           if (d.appTheme       !== undefined) { window.appTheme = d.appTheme; LS.s('appTheme', d.appTheme); if (typeof setTheme === 'function') setTheme(d.appTheme); }
@@ -439,6 +454,23 @@ const GDrive = (() => {
           if (d.routine !== undefined) { routine = d.routine; }
           if (d.routineLog !== undefined) { routineLog = d.routineLog; }
           if (d.tplDone !== undefined) { tplDone = d.tplDone; }
+          if (d.eduSchedule !== undefined) { eduSchedule = d.eduSchedule; }
+          if (d.eduSubjects !== undefined) { eduSubjects = d.eduSubjects; }
+          if (d.eduLinks !== undefined) { eduLinks = d.eduLinks; }
+          if (d.eduWeekParity !== undefined) { eduWeekParity = d.eduWeekParity; }
+          if (d.eduWeekAnchor !== undefined) { eduWeekAnchor = d.eduWeekAnchor; }
+          if (d.eduBells !== undefined) { eduBells = d.eduBells; }
+          if (d.finPieSlices !== undefined) { finPieSlices = d.finPieSlices; }
+          if (d.finPieSum !== undefined) { finPieSum = Math.max(0, Number(d.finPieSum) || 0); }
+          if (d.finLog !== undefined) { finLog = d.finLog; }
+          if (d.finTpl !== undefined) { finTpl = d.finTpl; }
+          if (d.finPlans !== undefined) { finPlans = d.finPlans; }
+          if (d.finCapital0 !== undefined) { finCapital0 = d.finCapital0; }
+          if (d.finPurchases !== undefined) { finPurchases = d.finPurchases; }
+          if (d.finDebts !== undefined) { finDebts = d.finDebts; }
+          if (d.finAssets !== undefined) { finAssets = d.finAssets; }
+          if (d.finAssetHistory !== undefined) { finAssetHistory = d.finAssetHistory; }
+          if (d.finPlans !== undefined && typeof finEnsurePlan === 'function') finEnsurePlan(finCurPlanKey());
           if (typeof migrateRoutine === 'function') migrateRoutine();
 if (typeof renderCurrent === 'function') renderCurrent();
         } catch (e) {
@@ -464,8 +496,10 @@ if (typeof renderCurrent === 'function') renderCurrent();
             'routine','routineLog','weekRtLog','monthRtLog','yearRtLog',
             'tplDone','habEnabled','health','hLog','supps','meds',
             'weights','birthdays','homework','notes','watchlist',
-            'skillTemplates','finLog','finTpl','finPurchases','finDebts',
-            'finPieSlices','physDiseases','nid','physParams','mentalParams'
+            'eduSchedule','eduSubjects','eduLinks','eduWeekParity','eduBells','eduWeekAnchor',
+            'skillTemplates','finLog','finTpl','finPlans','finCapital0',
+            'finPurchases','finDebts','finAssets','finAssetHistory',
+            'finPieSlices','finPieSum','physDiseases','nid','physParams','mentalParams'
           ];
           keys.forEach(k => {
             if (d[k] !== undefined) { window[k] = d[k]; if (typeof LS !== 'undefined') LS.s(k, d[k]); }
@@ -478,6 +512,7 @@ if (typeof renderCurrent === 'function') renderCurrent();
           if (d.notifCfg      !== undefined) LS.s('notifCfg',    d.notifCfg);
           if (d.remindersCfg  !== undefined) LS.s('remindersCfg', d.remindersCfg);
           if (d.interests     !== undefined) LS.s('interests',    d.interests);
+          if (d.aiProfile     !== undefined) LS.s('aiProfile',    d.aiProfile);
           if (d.finBudget     !== undefined) LS.s('finBudget',    d.finBudget);
           if (d.sleepRem      !== undefined) LS.s('sleepRem',     d.sleepRem);
           if (d.appTheme !== undefined) { window.appTheme = d.appTheme; LS.s('appTheme', d.appTheme); if (typeof setTheme === 'function') setTheme(d.appTheme); }
@@ -496,6 +531,23 @@ if (typeof renderCurrent === 'function') renderCurrent();
           if (d.routine !== undefined) { routine = d.routine; }
           if (d.routineLog !== undefined) { routineLog = d.routineLog; }
           if (d.tplDone !== undefined) { tplDone = d.tplDone; }
+          if (d.eduSchedule !== undefined) { eduSchedule = d.eduSchedule; }
+          if (d.eduSubjects !== undefined) { eduSubjects = d.eduSubjects; }
+          if (d.eduLinks !== undefined) { eduLinks = d.eduLinks; }
+          if (d.eduWeekParity !== undefined) { eduWeekParity = d.eduWeekParity; }
+          if (d.eduWeekAnchor !== undefined) { eduWeekAnchor = d.eduWeekAnchor; }
+          if (d.eduBells !== undefined) { eduBells = d.eduBells; }
+          if (d.finPieSlices !== undefined) { finPieSlices = d.finPieSlices; }
+          if (d.finPieSum !== undefined) { finPieSum = Math.max(0, Number(d.finPieSum) || 0); }
+          if (d.finLog !== undefined) { finLog = d.finLog; }
+          if (d.finTpl !== undefined) { finTpl = d.finTpl; }
+          if (d.finPlans !== undefined) { finPlans = d.finPlans; }
+          if (d.finCapital0 !== undefined) { finCapital0 = d.finCapital0; }
+          if (d.finPurchases !== undefined) { finPurchases = d.finPurchases; }
+          if (d.finDebts !== undefined) { finDebts = d.finDebts; }
+          if (d.finAssets !== undefined) { finAssets = d.finAssets; }
+          if (d.finAssetHistory !== undefined) { finAssetHistory = d.finAssetHistory; }
+          if (d.finPlans !== undefined && typeof finEnsurePlan === 'function') finEnsurePlan(finCurPlanKey());
           if (typeof migrateRoutine === 'function') migrateRoutine();
 if (typeof renderCurrent === 'function') renderCurrent();
         } catch (e) {

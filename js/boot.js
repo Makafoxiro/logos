@@ -59,7 +59,7 @@
 
       title.textContent = opts.title || '';
       note.textContent = opts.note || '';
-      ok.textContent = opts.okLabel || 'ВОЙТИ';
+      ok.textContent = opts.okLabel || 'Войти';
       inp2.style.display = opts.confirm ? '' : 'none';
       inp.value = ''; inp2.value = '';
       hideErr();
@@ -125,7 +125,7 @@
         title: 'логос: данные будут зашифрованы — придумайте пароль',
         note: 'пароль не сохраняется и не передаётся на сервер. забыли пароль — данные не восстановить. на других устройствах вводите пароль заново.',
         confirm: true,
-        okLabel: 'СОЗДАТЬ'
+        okLabel: 'Создать'
       });
       if (pw == null) return false;
       LS.authorize(pw);
@@ -135,7 +135,7 @@
     var pw = await askPassword({
       title: 'логос: введите пароль для расшифровки данных',
       note: 'данные хранятся зашифрованными на этом устройстве',
-      okLabel: 'ВОЙТИ'
+      okLabel: 'Войти'
     }, async function (p) {
       LS.authorize(p);
       try {

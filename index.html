@@ -32,6 +32,11 @@
   document.documentElement.style.setProperty('--hd', "'Nunito',sans-serif");
 })();
 </script>
+<style>
+  .fin-hdr{display:flex;align-items:center;border-bottom:1px solid var(--bd);padding:8px 0 8px 0 !important}
+  .fin-hdr .hdr-text{text-transform:none;background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:4px;color:var(--t);font-weight:700;flex:0 0 auto}
+  .fin-hdr .hdr-actions{display:flex;gap:5px;flex:1 1 auto;justify-content:flex-end;margin-left:0;margin-right:8px}
+</style>
 </head>
 <body>
 
@@ -53,8 +58,8 @@
       <input class="field-inp" id="pw-inp2" type="password" autocomplete="off" spellcheck="false" placeholder="повторите пароль">
       <div id="pw-err"></div>
       <div id="pw-actions">
-        <button class="add-btn" id="pw-ok" type="button">ВОЙТИ</button>
-        <button id="pw-cancel" type="button">отмена</button>
+        <button class="add-btn" id="pw-ok" type="button">Войти</button>
+        <button id="pw-cancel" type="button">Отмена</button>
       </div>
       <div id="pw-note"></div>
     </div>
@@ -205,7 +210,10 @@
   <div class="modal">
     <div class="mhead"><div class="mtitle">день рождения</div></div>
     <div class="field-row"><label class="field-label">Имя</label><input class="field-inp" id="bdName" placeholder="Имя (скобка)"></div>
+    <div class="field-row"><label class="field-label">Связь</label><input class="field-inp" id="bdRel" placeholder="одноклассник, друг..."></div>
+    <div class="field-row"><label class="field-label">Телефон</label><input class="field-inp" type="tel" id="bdPhone" placeholder="+7..."></div>
     <div class="field-row"><label class="field-label">Дата</label><input class="field-inp" type="date" id="bdDate"></div>
+    <div class="field-row"><label class="field-label">Заметка</label><textarea class="field-inp" id="bdNote" placeholder="Особые пожелания, адрес..."></textarea></div>
     <button class="add-btn" style="width:100%;margin-top:8px" onclick="confirmAddBd()">СОХРАНИТЬ</button>
   </div>
 </div>
@@ -214,7 +222,10 @@
   <div class="modal">
     <div class="mhead"><div class="mtitle">редактировать</div></div>
     <div class="field-row"><label class="field-label">Имя</label><input class="field-inp" id="bdEditName" placeholder="Имя (скобка)"></div>
+    <div class="field-row"><label class="field-label">Связь</label><input class="field-inp" id="bdEditRel" placeholder="одноклассник, друг..."></div>
+    <div class="field-row"><label class="field-label">Телефон</label><input class="field-inp" type="tel" id="bdEditPhone" placeholder="+7..."></div>
     <div class="field-row"><label class="field-label">Дата</label><input class="field-inp" type="date" id="bdEditDate"></div>
+    <div class="field-row"><label class="field-label">Заметка</label><textarea class="field-inp" id="bdEditNote" placeholder="Особые пожелания, адрес..."></textarea></div>
     <div class="btn-row"><button class="del-btn" onclick="delBd(bdEditId);closeBdEditModal()">УДАЛИТЬ</button><button class="add-btn" onclick="confirmEditBd()">СОХРАНИТЬ</button></div>
   </div>
 </div>
@@ -232,11 +243,73 @@
         <button onclick="clearHwPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--c2);border:1px solid var(--bd);border-radius:var(--rm);padding:10px 13px;font-size:13px;color:var(--t2)">
-        📷 Прикрепить фото
+        <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg> Прикрепить фото
         <input type="file" id="hwPhotoInput" accept="image/*" style="display:none" onchange="previewHwPhoto(this)">
       </label>
     </div>
     <button class="add-btn" style="width:100%;margin-top:8px" onclick="confirmAddHw()">СОХРАНИТЬ</button>
+  </div>
+</div>
+
+<!-- УЧЕБА: модалка пары -->
+<div class="modal-bg" id="eduPairModal" onclick="if(event.target===this)closeEduPairModal()">
+  <div class="modal">
+    <div class="mhead"><div class="mtitle" id="eduPairTitle">пара</div></div>
+    <div class="field-row"><label class="field-label">День</label>
+      <select class="field-inp" id="eduPairDay">
+        <option value="0">Понедельник</option><option value="1">Вторник</option><option value="2">Среда</option>
+        <option value="3">Четверг</option><option value="4">Пятница</option><option value="5">Суббота</option><option value="6">Воскресенье</option>
+      </select>
+    </div>
+    <div class="field-row"><label class="field-label">Время</label><input class="field-inp" id="eduPairTime" placeholder="08:00..." onkeydown="if(event.key==='Enter')document.getElementById('eduPairName').focus()"></div>
+    <div class="field-row"><label class="field-label">Предмет</label><input class="field-inp" id="eduPairName" placeholder="Математика..." onkeydown="if(event.key==='Enter')confirmEduPair()"></div>
+    <div class="field-row"><label class="field-label">Преподаватель (необязательно)</label><input class="field-inp" id="eduPairTeacher" placeholder="Иванов И.И."></div>
+    <div class="field-row" style="display:flex;gap:8px">
+      <div style="flex:1"><label class="field-label">Корпус</label><input class="field-inp" id="eduPairCorpus" placeholder="1"></div>
+      <div style="flex:1"><label class="field-label">Аудитория</label><input class="field-inp" id="eduPairRoom" placeholder="305"></div>
+    </div>
+    <div class="field-row"><label class="field-label">Неделя</label>
+      <select class="field-inp" id="eduPairParity">
+        <option value="both">каждая</option><option value="num">числитель</option><option value="den">знаменатель</option>
+      </select>
+    </div>
+    <div class="btn-row"><button class="del-btn" id="eduPairDelBtn" onclick="delEduPair();closeEduPairModal()" style="display:none">УДАЛИТЬ</button><button class="add-btn" onclick="confirmEduPair()">СОХРАНИТЬ</button></div>
+  </div>
+</div>
+
+<!-- УЧЕБА: модалка звонка -->
+<div class="modal-bg" id="eduBellModal" onclick="if(event.target===this)closeEduBellModal()">
+  <div class="modal">
+    <div class="mhead"><div class="mtitle" id="eduBellTitle">звонок</div></div>
+    <div class="field-row"><label class="field-label">День</label>
+      <select class="field-inp" id="eduBellDay">
+        <option value="0">Понедельник</option><option value="1">Вторник</option><option value="2">Среда</option>
+        <option value="3">Четверг</option><option value="4">Пятница</option><option value="5">Суббота</option><option value="6">Воскресенье</option>
+      </select>
+    </div>
+    <div class="field-row"><label class="field-label">Время</label><input class="field-inp" id="eduBellTime" placeholder="08:00..." onkeydown="if(event.key==='Enter')document.getElementById('eduBellName').focus()"></div>
+    <div class="field-row"><label class="field-label">Название (необязательно)</label><input class="field-inp" id="eduBellName" placeholder="1 пара..." onkeydown="if(event.key==='Enter')confirmEduBell()"></div>
+    <div class="btn-row"><button class="del-btn" id="eduBellDelBtn" onclick="delEduBell();closeEduBellModal()" style="display:none">УДАЛИТЬ</button><button class="add-btn" onclick="confirmEduBell()">СОХРАНИТЬ</button></div>
+  </div>
+</div>
+
+<!-- УЧЕБА: модалка предмета -->
+<div class="modal-bg" id="eduSubjModal" onclick="if(event.target===this)closeEduSubjModal()">
+  <div class="modal">
+    <div class="mhead"><div class="mtitle" id="eduSubjTitle">предмет</div></div>
+    <div class="field-row"><label class="field-label">Название</label><input class="field-inp" id="eduSubjName" placeholder="Физика..." onkeydown="if(event.key==='Enter')document.getElementById('eduSubjTeacher').focus()"></div>
+    <div class="field-row"><label class="field-label">Преподаватель (необязательно)</label><input class="field-inp" id="eduSubjTeacher" placeholder="Иванов И.И." onkeydown="if(event.key==='Enter')confirmEduSubj()"></div>
+    <div class="btn-row"><button class="del-btn" id="eduSubjDelBtn" onclick="delEduSubj();closeEduSubjModal()" style="display:none">УДАЛИТЬ</button><button class="add-btn" onclick="confirmEduSubj()">СОХРАНИТЬ</button></div>
+  </div>
+</div>
+
+<!-- УЧЕБА: модалка ссылки -->
+<div class="modal-bg" id="eduLinkModal" onclick="if(event.target===this)closeEduLinkModal()">
+  <div class="modal">
+    <div class="mhead"><div class="mtitle" id="eduLinkTitle">ссылка</div></div>
+    <div class="field-row"><label class="field-label">Название</label><input class="field-inp" id="eduLinkName" placeholder="Расписание (сайт)..." onkeydown="if(event.key==='Enter')document.getElementById('eduLinkUrl').focus()"></div>
+    <div class="field-row"><label class="field-label">URL</label><input class="field-inp" id="eduLinkUrl" placeholder="https://..." onkeydown="if(event.key==='Enter')confirmEduLink()"></div>
+    <div class="btn-row"><button class="del-btn" id="eduLinkDelBtn" onclick="delEduLink();closeEduLinkModal()" style="display:none">УДАЛИТЬ</button><button class="add-btn" onclick="confirmEduLink()">СОХРАНИТЬ</button></div>
   </div>
 </div>
 
@@ -295,7 +368,7 @@
     <div class="logo"><img src="data:image/png;base64,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" width="26" height="26" style="flex-shrink:0;object-fit:contain;margin-right:2px" alt=""/>LOGOS</div>
     <div class="top-r">
       <div class="top-date" id="topDate"></div>
-      <div class="ib" onclick="openCal()" title="Календарь">📅</div>
+      <div class="ib" onclick="openCal()" title="Календарь"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg></div>
     </div>
   </div>
   <div id="banner" class="banner"></div>
@@ -327,19 +400,29 @@
         <div id="today-notifs-block" style="margin-bottom:12px;display:none">
           <div id="today-notifs-panel-inner"></div>
         </div>
+        <div id="today-sched-block" style="margin-bottom:12px;display:none">
+          <div class="today-block-label today-collapsible" onclick="toggleTodayGoalBlock('today-sched-collapsed','today-sched-list',this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:6px 10px;border-radius:8px;background:var(--c2);border:1px solid var(--bd)">
+            <span style="display:flex;align-items:center;gap:6px"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3 3 9 3 12 0v-5M22 9v6"/></svg><span>пары сегодня</span> <span id="today-sched-count" style="font-family:var(--mono);font-size:9px;color:var(--a);background:var(--a2);border-radius:8px;padding:1px 6px"></span></span>
+            <span id="today-sched-chevron" style="font-size:12px;color:var(--a);transition:transform .25s;display:inline-block">▾</span>
+          </div>
+          <div id="today-sched-list" style="display:none;flex-direction:column;gap:6px"></div>
+        </div>
         <div id="today-hw-block" style="margin-bottom:12px;display:none">
-          <div class="today-block-label">домашнее задание</div>
-          <div id="today-hw-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          <div class="today-block-label today-collapsible" onclick="toggleTodayGoalBlock('today-hw-collapsed','today-hw-list',this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:6px 10px;border-radius:8px;background:var(--c2);border:1px solid var(--bd)">
+            <span style="display:flex;align-items:center;gap:6px"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14M3 18V5a2 2 0 0 1 2-2h2a5 5 0 0 1 5 5 5 5 0 0 1 5-5h2a2 2 0 0 1 2 2v13h-4a5 5 0 0 0-5 3 5 5 0 0 0-5-3H3Z"/></svg><span>домашнее задание</span> <span id="today-hw-count" style="font-family:var(--mono);font-size:9px;color:var(--a);background:var(--a2);border-radius:8px;padding:1px 6px"></span></span>
+            <span id="today-hw-chevron" style="font-size:12px;color:var(--a);transition:transform .25s;display:inline-block">▸</span>
+          </div>
+          <div id="today-hw-list" style="display:none;flex-direction:column;gap:6px"></div>
         </div>
         <div id="today-tasks-block" style="margin-bottom:12px">
           <div class="today-block-label" style="display:flex;align-items:center;justify-content:space-between">
             <span>задачи</span>
-            <button id="today-tpl-toggle-btn" onclick="toggleTodayTplView()" style="background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:13px;padding:4px 10px;cursor:pointer;transition:.15s;line-height:1.4" onmouseenter="this.style.background='var(--a)';this.style.color='#000'" onmouseleave="this.style.background='var(--c2)';this.style.color='var(--t2)'">📋</button>
+            <button id="today-tpl-toggle-btn" onclick="toggleTodayTplView()" style="background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:13px;padding:4px 10px;cursor:pointer;transition:.15s;line-height:1.4" onmouseenter="this.style.background='var(--a)';this.style.color='#000'" onmouseleave="this.style.background='var(--c2)';this.style.color='var(--t2)'"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4.5h6a1.5 1.5 0 0 0-3-1 1.5 1.5 0 0 0-3 1ZM9 11h6M9 15h6M9 19h3"/></svg></button>
           </div>
           <div style="display:flex;align-items:center;gap:16px;background:var(--c1);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:8px">
             <svg width="76" height="76" viewBox="0 0 76 76">
               <circle cx="38" cy="38" r="30" fill="none" stroke="var(--c3)" stroke-width="7"/>
-              <circle id="today-tasks-ring" cx="38" cy="38" r="30" fill="none" stroke="var(--a)" stroke-width="7" stroke-linecap="round" style="stroke-dasharray:188.5;stroke-dashoffset:188.5;transform:rotate(-90deg);transform-origin:38px 38px;transition:stroke-dashoffset .5s ease"/>
+              <circle id="today-tasks-ring" cx="38" cy="38" r="30" fill="none" stroke="var(--a)" stroke-width="7" stroke-linecap="round" style="stroke-dasharray:188.5;stroke-dashoffset:188.5;transform:rotate(-90deg);transform-origin:38px 38px;"/>
               <text x="38" y="43" text-anchor="middle" font-family="var(--hd,'Nunito',sans-serif)" font-weight="800" font-size="18" fill="var(--t)" id="today-tasks-ring-txt">0%</text>
             </svg>
             <div style="flex:1">
@@ -357,14 +440,14 @@
 
         <div id="today-freegoals-block" style="margin-bottom:12px;display:none">
           <div class="today-block-label today-collapsible" onclick="toggleTodayGoalBlock('today-fg-collapsed','today-freegoals-list',this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:6px 10px;border-radius:8px;background:var(--c2);border:1px solid var(--bd)">
-            <span style="display:flex;align-items:center;gap:6px">🎯 <span>просто цели</span> <span id="today-fg-count" style="font-family:var(--mono);font-size:9px;color:var(--a);background:var(--a2);border-radius:8px;padding:1px 6px"></span></span>
+            <span style="display:flex;align-items:center;gap:6px"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><span>просто цели</span> <span id="today-fg-count" style="font-family:var(--mono);font-size:9px;color:var(--a);background:var(--a2);border-radius:8px;padding:1px 6px"></span></span>
             <span id="today-fg-chevron" style="font-size:12px;color:var(--a);transition:transform .25s;display:inline-block">▸</span>
           </div>
           <div id="today-freegoals-list" style="display:none;flex-direction:column;gap:6px"></div>
         </div>
         <div id="today-deadline-goals-block" style="margin-bottom:12px;display:none">
           <div class="today-block-label today-collapsible" onclick="toggleTodayGoalBlock('today-dl-collapsed','today-deadline-goals-list',this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:6px 10px;border-radius:8px;background:var(--c2);border:1px solid var(--bd)">
-            <span style="display:flex;align-items:center;gap:6px">⏰ <span>цели с дедлайном</span> <span id="today-dl-count" style="font-family:var(--mono);font-size:9px;color:var(--a);background:var(--a2);border-radius:8px;padding:1px 6px"></span></span>
+            <span style="display:flex;align-items:center;gap:6px"><span class="ui-icon-host" data-ui-icon="clock"></span><span>цели с дедлайном</span> <span id="today-dl-count" style="font-family:var(--mono);font-size:9px;color:var(--a);background:var(--a2);border-radius:8px;padding:1px 6px"></span></span>
             <span id="today-dl-chevron" style="font-size:12px;color:var(--a);transition:transform .25s;display:inline-block">▸</span>
           </div>
           <div id="today-deadline-goals-list" style="display:none;flex-direction:column;gap:6px"></div>
@@ -382,11 +465,11 @@
           <div id="today-routine-items" style="background:var(--c1);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden"></div>
         </div>
         <div id="today-week-routine-block" style="margin-bottom:12px;display:none">
-          <div class="today-block-label">🚀 рутина новой недели</div>
+          <div class="today-block-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15 9 12c.5-4.5 3.5-8 10-9-.5 6.5-4.5 9.5-7 10Z"/><path d="m9 12-4 1-2 4 6-1m3-1 1 5 4-3v-4M6 19l-2 2"/><circle cx="15" cy="8" r="1"/></svg> рутина новой недели</div>
           <div id="today-week-routine-list" style="background:var(--c1);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden"></div>
         </div>
         <div id="today-year-routine-block" style="margin-bottom:12px;display:none">
-          <div class="today-block-label">🎉 рутина нового года</div>
+          <div class="today-block-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 5 6h-3l5 6h-4l4 6H5l4-6H5l5-6H7l5-6ZM12 20v2"/></svg> рутина нового года</div>
           <div id="today-year-routine-list" style="background:var(--c1);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden"></div>
         </div>
       </div>
@@ -410,7 +493,8 @@
         <div class="items" id="habitsList"></div>
         <div class="sh" style="margin-top:4px">добавить привычку</div>
         <div class="card">
-          <div class="epick" id="epick"></div>
+          <div class="field-label">Значок</div>
+          <div class="habit-icon-picker" id="epick" aria-label="Значок привычки"></div>
           <div style="display:flex;flex-direction:column;gap:7px">
             <div class="add-row" style="margin:0">
               <input class="add-inp" id="habitInp" placeholder="Название привычки..." maxlength="40" onkeydown="if(event.key==='Enter')document.getElementById('habitDescInp').focus()">
@@ -447,7 +531,7 @@
           <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">
             <input class="add-inp" id="freeGoalTextInp" placeholder="Моя цель..." maxlength="300" onkeydown="if(event.key==='Enter')addFreeGoal()">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--c2);border:1px solid var(--bd);border-radius:var(--rm);padding:10px 13px;font-size:13px;color:var(--t2)">
-              📷 Прикрепить фото
+              <span class="ui-icon-host" data-ui-icon="camera"></span> Прикрепить фото
               <input type="file" id="freeGoalPhotoInput" accept="image/*" style="display:none" onchange="onFreeGoalPhoto(this)">
             </label>
             <div id="freeGoalPhotoPreview" style="display:none;position:relative">
@@ -481,7 +565,7 @@
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
               <div style="position:relative">
                 <div style="font-family:var(--hd);font-size:42px;color:#38bdf8;line-height:1;text-shadow:0 0 20px rgba(56,189,248,0.5)" id="waterCount">0</div>
-                <div style="position:absolute;top:-4px;right:-8px;font-size:10px">💧</div>
+                <div class="ui-icon-host" data-ui-icon="droplet" style="position:absolute;top:-4px;right:-8px;color:#38bdf8"></div>
               </div>
               <div>
                 <div style="font-family:var(--mono);font-size:11px;color:rgba(56,189,248,0.7)" id="waterLbl2">из 10 стаканов</div>
@@ -566,7 +650,7 @@
         <div id="suppGrid"></div>
 
         <!-- ── АПТЕЧКА ── -->
-        <div class="sh" style="margin-top:4px">аптечка 💊 <span class="sh-btn" onclick="openMedModal()">+ добавить</span></div>
+        <div class="sh" style="margin-top:4px">аптечка <span class="ui-icon-host" data-ui-icon="capsule"></span> <span class="sh-btn" onclick="openMedModal()">+ добавить</span></div>
         <div id="medGrid"></div>
         <!-- ── ФИЗКАРТОЧКА ── -->
         <div class="sh">физкарточка
@@ -708,6 +792,11 @@
             <span style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--t2);text-transform:uppercase">баланс</span>
             <span id="finBalanceVal" style="font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:-0.5px;color:var(--t2);transition:color .2s">0 ₽</span>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
+            <button onclick="finNavMonth(-1)" style="background:var(--c2);border:1px solid var(--bd);border-radius:7px;color:var(--t2);font-family:var(--mono);font-size:12px;padding:2px 9px;cursor:pointer">‹</button>
+            <span id="fin-nav-lbl" style="font-family:var(--mono);font-size:11px;color:var(--t2);min-width:110px;text-align:center"></span>
+            <button onclick="finNavMonth(1)" style="background:var(--c2);border:1px solid var(--bd);border-radius:7px;color:var(--t2);font-family:var(--mono);font-size:12px;padding:2px 9px;cursor:pointer">›</button>
+          </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
             <span style="font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--t2)">доходы и расходы</span>
             <div style="display:flex;gap:5px">
@@ -722,6 +811,10 @@
             <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:2px;background:#4ade80;border-radius:2px"></div><div style="width:7px;height:7px;border-radius:50%;background:#4ade80"></div><span style="font-family:var(--mono);font-size:9px;color:var(--t2)" id="fin-legend-income">доход</span></div>
             <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:2px;background:#f87171;border-radius:2px"></div><div style="width:7px;height:7px;border-radius:50%;background:#f87171"></div><span style="font-family:var(--mono);font-size:9px;color:var(--t2)" id="fin-legend-expense">расход</span></div>
           </div>
+          <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
+            <span id="finChartTypeLine" class="sh-btn" onclick="finSetChartType('line')" style="background:var(--a2);border-color:var(--ab);color:var(--a)">линия</span>
+            <span id="finChartTypeBar" class="sh-btn" onclick="finSetChartType('bar')" style="">столбики</span>
+          </div>
         </div>
         <!-- Daily log -->
         <div class="sh" id="fin-day-lbl">записи за день</div>
@@ -732,66 +825,133 @@
         </div>
 
         <!-- Weekly template -->
-        <div class="sh" id="fin-week-lbl">шаблон недели
-          <div style="display:flex;gap:5px">
-            <span class="sh-btn" onclick="openFinTplModal('week','income')" id="fin-week-inc-btn">＋ доход</span>
-            <span class="sh-btn" onclick="openFinTplModal('week','expense')" id="fin-week-exp-btn">－ расход</span>
+        <div class="sh fin-hdr" id="fin-week-lbl" style="display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">шаблон недели</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('week','income')" id="fin-week-inc-btn">＋ доход</span>
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('week','expense')" id="fin-week-exp-btn">－ расход</span>
           </div>
+          <span id="fin-week-chev" onclick="toggleFinTpl('finWeekTpl','fin-week-chev','finWeekTplCollapsed')" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
         </div>
         <div id="finWeekTpl" class="card" style="padding:10px 12px"></div>
 
         <!-- Monthly template -->
-        <div class="sh" id="fin-month-lbl">шаблон · 1 месяц
-          <div style="display:flex;gap:5px">
-            <span class="sh-btn" onclick="openFinTplModal('month','income')" id="fin-month-inc-btn">＋ доход</span>
-            <span class="sh-btn" onclick="openFinTplModal('month','expense')" id="fin-month-exp-btn">－ расход</span>
+        <div class="sh fin-hdr" id="fin-month-lbl" style="display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">шаблон · 1 месяц</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('month','income')" id="fin-month-inc-btn">＋ доход</span>
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('month','expense')" id="fin-month-exp-btn">－ расход</span>
           </div>
+          <span id="fin-month-chev" onclick="toggleFinTpl('finMonthTpl','fin-month-chev','finMonthTplCollapsed')" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
         </div>
         <div id="finMonthTpl" class="card" style="padding:10px 12px"></div>
 
         <!-- 3-month template -->
-        <div class="sh" id="fin-month3-lbl">шаблон · 3 месяца
-          <div style="display:flex;gap:5px">
-            <span class="sh-btn" onclick="openFinTplModal('month3','income')" id="fin-month3-inc-btn">＋ доход</span>
-            <span class="sh-btn" onclick="openFinTplModal('month3','expense')" id="fin-month3-exp-btn">－ расход</span>
+        <div class="sh fin-hdr" id="fin-month3-lbl" style="display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">шаблон · 3 месяца</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('month3','income')" id="fin-month3-inc-btn">＋ доход</span>
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('month3','expense')" id="fin-month3-exp-btn">－ расход</span>
           </div>
+          <span id="fin-month3-chev" onclick="toggleFinTpl('finMonth3Tpl','fin-month3-chev','finMonth3TplCollapsed')" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
         </div>
         <div id="finMonth3Tpl" class="card" style="padding:10px 12px"></div>
 
-        <!-- Yearly template -->
-        <div class="sh" id="fin-year-lbl">шаблон года
-          <div style="display:flex;gap:5px">
-            <span class="sh-btn" onclick="openFinTplModal('year','income')" id="fin-year-inc-btn">＋ доход</span>
-            <span class="sh-btn" onclick="openFinTplModal('year','expense')" id="fin-year-exp-btn">－ расход</span>
+        <!-- Half-year template -->
+        <div class="sh fin-hdr" id="fin-halfyear-lbl" style="display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">шаблон · полгода</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('halfYear','income')">＋ доход</span>
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('halfYear','expense')">－ расход</span>
           </div>
+          <span id="fin-halfyear-chev" onclick="toggleFinTpl('finHalfYearTpl','fin-halfyear-chev','finHalfYearTplCollapsed')" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
+        </div>
+        <div id="finHalfYearTpl" class="card" style="padding:10px 12px"></div>
+
+        <!-- Yearly template -->
+        <div class="sh fin-hdr" id="fin-year-lbl" style="display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">шаблон года</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('year','income')" id="fin-year-inc-btn">＋ доход</span>
+            <span class="sh-btn" onclick="event.stopPropagation();openFinTplModal('year','expense')" id="fin-year-exp-btn">－ расход</span>
+          </div>
+          <span id="fin-year-chev" onclick="toggleFinTpl('finYearTpl','fin-year-chev','finYearTplCollapsed')" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
         </div>
         <div id="finYearTpl" class="card" style="padding:10px 12px"></div>
 
         <!-- Big purchases -->
-        <div class="sh" id="fin-purchases-lbl">покупки
-          <span class="sh-btn" onclick="openFinPurchaseModal()" id="fin-purchase-add-btn">＋ добавить</span>
+        <div class="sh fin-hdr" id="fin-purchases-lbl" style="display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">покупки</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openFinPurchaseModal()" id="fin-purchase-add-btn">＋ добавить</span>
+          </div>
+          <span id="fin-purchases-chev" onclick="toggleFinPurchases()" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
         </div>
         <div id="finPurchases" style="margin-bottom:10px"></div>
+        <div id="finPurchasesArchiveHdr" onclick="toggleFinPurchasesArchive()" style="display:none;align-items:center;gap:8px;padding:9px 12px;margin:4px 0 10px;border:1px solid var(--bd);border-radius:10px;background:var(--c2);cursor:pointer;user-select:none">
+          <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:var(--t3);flex-shrink:0"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H10l2 2h7.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M3 10h18"/></svg>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--t2);flex:1">архив покупок</span><span id="finPurchasesArchiveCount" style="font-family:var(--mono);font-size:9px;color:var(--t3)">0</span>
+          <span id="finPurchasesArchiveChev" style="font-size:10px;color:var(--t3)">▸</span>
+        </div>
+        <div id="finPurchasesArchive" style="display:none;margin-bottom:10px"></div>
 
         <!-- Debts -->
-        <div class="sh" id="fin-debts-lbl">задолженности
-          <div style="display:flex;gap:5px">
-            <span class="sh-btn" onclick="openFinDebtModal('owe')" id="fin-debt-owe-btn">я должен</span>
-            <span class="sh-btn" onclick="openFinDebtModal('owed')" id="fin-debt-owed-btn">мне должны</span>
+        <div class="sh fin-hdr" id="fin-debts-lbl" style="display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">задолженности</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openFinDebtModal('owe')" id="fin-debt-owe-btn">я должен</span>
+            <span class="sh-btn" onclick="event.stopPropagation();openFinDebtModal('owed')" id="fin-debt-owed-btn">мне должны</span>
           </div>
+          <span id="fin-debts-chev" onclick="toggleFinDebts()" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
         </div>
         <div id="finDebts" style="margin-bottom:16px"></div>
 
         <!-- Budget pie chart -->
-        <div class="sh" style="margin-top:4px">круговая диаграмма расходов
-          <span class="sh-btn" onclick="openPieSliceModal()">+ категория</span>
+        <div class="sh fin-hdr" id="fin-pie-lbl" style="margin-top:4px;display:flex;align-items:center;justify-content:space-between;cursor:default;user-select:none"><span class="hdr-text">круговая диаграмма расходов</span>
+          <div class="hdr-actions">
+            <span class="sh-btn" onclick="event.stopPropagation();openPieSliceModal()">+ категория</span>
+          </div>
+          <span id="fin-pie-chev" onclick="toggleFinPie()" style="font-size:10px;cursor:pointer;user-select:none">▼</span>
         </div>
         <div class="card" id="finPieCard" style="padding:14px">
           <div id="finPieContainer" style="display:flex;flex-direction:column;align-items:center;gap:14px">
-            <canvas id="finPieCanvas" width="220" height="220" style="max-width:220px;cursor:pointer" onclick="togglePieExpand()" title="Нажми для разворота"></canvas>
-            <div id="finPieLegend" style="width:100%"></div>
+          <div class="pie-chart-wrap">
+            <canvas id="finPieCanvas" width="220" height="220" onclick="togglePieExpand()" title="Нажми для разворота"></canvas>
+            <div class="pie-center">
+              <strong>100%</strong>
+              <label><input id="finPieSumInput" type="number" min="0" step="1" inputmode="decimal" placeholder="Сумма" aria-label="Общая сумма для распределения в рублях" oninput="updateFinPieSum(this.value)" onclick="event.stopPropagation()"><span>₽</span></label>
+            </div>
+          </div>
+          <div id="finPieLegend" style="width:100%"></div>
+        </div>
+        </div>
+
+        <!-- Стартовый капитал -->
+        <div class="sh" style="margin-top:10px">капитал
+          <span class="sh-btn" onclick="openFinCapitalModal()" style="font-size:10px;padding:2px 8px">задать старт</span>
+        </div>
+        <div class="card" style="padding:12px">
+          <div id="finCapitalVal" style="font-family:var(--mono);font-size:20px;font-weight:700;color:#4ade80">0 ₽</div>
+          <div id="finCapitalSub" style="font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:2px">старт 0 ₽</div>
+        </div>
+        <div class="sh" style="margin-top:8px">активы
+          <button class="sh-btn" onclick="openFinAssetModal()" style="font-size:10px;padding:2px 8px">+ добавить</button>
+        </div>
+        <div id="finAssetsList" style="margin-top:6px"></div>
+
+        <!-- Таблица месяцев -->
+        <div class="sh fin-hdr" style="margin-top:10px"><span class="hdr-text">по месяцам</span>
+          <div class="hdr-actions">
+            <button id="finMonths6Btn" class="sh-btn" onclick="finSetMonthsN(6)" style="font-size:9px;padding:3px 8px">6 мес</button>
+            <button id="finMonths12Btn" class="sh-btn" onclick="finSetMonthsN(12)" style="font-size:9px;padding:3px 8px">12 мес</button>
+            <span class="sh-btn" id="fin-months-clear-btn" onclick="finClearMonthLog()" style="font-size:9px;padding:3px 8px;color:var(--a);border-color:var(--ab);background:var(--a2)">очистить историю</span>
           </div>
         </div>
+        <div id="finMonthsTbl" style="margin-top:6px"></div>
+
+        <!-- Итого за всё время -->
+        <div class="sh" style="margin-top:10px">итого за всё время</div>
+        <div id="finTotalAll" style="margin-top:6px"></div>
+        <div style="margin:14px 0 4px">
+          <button class="add-btn" onclick="exportFinanceExcel()" style="width:100%;padding:11px 14px;display:flex;align-items:center;justify-content:center;gap:8px">
+            <span aria-hidden="true">↓</span> ВЫГРУЗИТЬ ВСЕ ФИНАНСЫ В EXCEL
+          </button>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--t3);text-align:center;margin-top:5px">Вся история по дням и месяцам, планы, покупки и архив, долги, активы, настройки и графики · .xlsx</div>
+        </div>
+
       </div>
     </div>
     <div id="pg-memo" class="pg" style="flex-direction:column">
@@ -813,8 +973,8 @@
           <div class="srow">
             <div><div class="slabel" id="s-theme-lbl">Тема</div><div class="ssub" id="s-theme-sub">Тёмная / Светлая</div></div>
             <div style="display:flex;gap:6px">
-              <div id="themeDarkBtn" onclick="setTheme('dark')" style="font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);background:var(--c2);color:var(--t2)">🌑</div>
-              <div id="themeLightBtn" onclick="setTheme('light')" style="font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);background:var(--c2);color:var(--t2)">☀️</div>
+              <div id="themeDarkBtn" onclick="setTheme('dark')" style="font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);background:var(--c2);color:var(--t2)"><span class="ui-icon-host" data-ui-icon="moon"></span></div>
+              <div id="themeLightBtn" onclick="setTheme('light')" style="font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);background:var(--c2);color:var(--t2)"><span class="ui-icon-host" data-ui-icon="sun"></span></div>
             </div>
           </div>
           <div class="srow">
@@ -834,8 +994,8 @@
         <div class="sh" id="s-gdrive-lbl">google drive</div>
         <div class="scard" id="gdriveCard">
           <div class="srow" id="gdriveAuthRow">
-            <div><div class="slabel" id="s-gdrive-name">Google Drive</div><div class="ssub" id="gdriveStatus">🔴 Не подключено</div></div>
-            <button class="add-btn" id="gdriveAuthBtn" onclick="gdriveAuth()">ВОЙТИ</button>
+            <div><div class="slabel" id="s-gdrive-name">Google Drive</div><div class="ssub" id="gdriveStatus"><span class="ui-icon-host" data-ui-icon="circle"></span> Не подключено</div></div>
+            <button class="add-btn" id="gdriveAuthBtn" onclick="gdriveAuth()">Войти</button>
           </div>
           <div id="gdriveSyncRow" style="display:none">
             <div class="srow">
@@ -900,6 +1060,8 @@
         <div class="scard">
           <div class="srow"><button class="add-btn" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.25)" onclick="clearToday()" id="s-reset-btn">СБРОСИТЬ ЗАДАЧИ СЕГОДНЯ</button></div>
           <div class="srow"><button class="add-btn" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.5);background:rgba(239,68,68,0.07)" onclick="clearAll()" id="s-reset-all-btn">СБРОСИТЬ ВСЁ</button></div>
+          <div class="srow"><button class="add-btn" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.5);background:rgba(239,68,68,0.07)" onclick="clearFinanceSettings()" id="s-reset-fin-settings-btn">СБРОСИТЬ НАСТРОЙКИ ФИНАНСОВ</button></div>
+          <div class="srow"><button class="add-btn" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.5);background:rgba(239,68,68,0.07)" onclick="clearFinanceHistory()" id="s-reset-fin-history-btn">СБРОСИТЬ ИСТОРИЮ ФИНАНСОВ</button></div>
         </div>
         <div class="card" style="border-color:rgba(45,212,191,0.15)">
           <div style="font-size:11px;color:var(--t2);line-height:1.8" id="s-info-text">
@@ -965,21 +1127,21 @@
     <div class="field-row"><label class="field-label">Тип</label>
       <input type="hidden" id="watchEditType" value="film">
       <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <button id="watchEditTypeBtn_film"    onclick="watchPickType('film','watchEdit')"    class="wchip">🎬 Фильм</button>
-        <button id="watchEditTypeBtn_series"  onclick="watchPickType('series','watchEdit')"  class="wchip">📺 Сериал</button>
-        <button id="watchEditTypeBtn_anime"   onclick="watchPickType('anime','watchEdit')"   class="wchip">✨ Аниме</button>
-        <button id="watchEditTypeBtn_cartoon" onclick="watchPickType('cartoon','watchEdit')" class="wchip">🎨 Мульт</button>
-        <button id="watchEditTypeBtn_manga"   onclick="watchPickType('manga','watchEdit')"   class="wchip">📖 Манга</button>
-        <button id="watchEditTypeBtn_dorama"  onclick="watchPickType('dorama','watchEdit')"  class="wchip">🌸 Дорама</button>
-        <button id="watchEditTypeBtn_book"    onclick="watchPickType('book','watchEdit')"    class="wchip">📚 Книги</button>
+        <button id="watchEditTypeBtn_film"    onclick="watchPickType('film','watchEdit')"    class="wchip"><span class="ui-icon-host" data-ui-icon="film"></span> Фильм</button>
+        <button id="watchEditTypeBtn_series"  onclick="watchPickType('series','watchEdit')"  class="wchip"><span class="ui-icon-host" data-ui-icon="screen"></span> Сериал</button>
+        <button id="watchEditTypeBtn_anime"   onclick="watchPickType('anime','watchEdit')"   class="wchip"><span class="ui-icon-host" data-ui-icon="sparkles"></span> Аниме</button>
+        <button id="watchEditTypeBtn_cartoon" onclick="watchPickType('cartoon','watchEdit')" class="wchip"><span class="ui-icon-host" data-ui-icon="palette"></span> Мульт</button>
+        <button id="watchEditTypeBtn_manga"   onclick="watchPickType('manga','watchEdit')"   class="wchip"><span class="ui-icon-host" data-ui-icon="book"></span> Манга</button>
+        <button id="watchEditTypeBtn_dorama"  onclick="watchPickType('dorama','watchEdit')"  class="wchip"><span class="ui-icon-host" data-ui-icon="heart"></span> Дорама</button>
+        <button id="watchEditTypeBtn_book"    onclick="watchPickType('book','watchEdit')"    class="wchip"><span class="ui-icon-host" data-ui-icon="book"></span> Книги</button>
       </div>
     </div>
     <div class="field-row"><label class="field-label">Статус</label>
       <input type="hidden" id="watchEditStatus" value="want">
       <div style="display:flex;gap:6px">
-        <button id="watchEditStatusBtn_want"     onclick="watchPickStatus('want','watchEdit')"     class="wchip" style="flex:1">🔖 Хочу</button>
+        <button id="watchEditStatusBtn_want"     onclick="watchPickStatus('want','watchEdit')"     class="wchip" style="flex:1"><span class="ui-icon-host" data-ui-icon="bookmark"></span> Хочу</button>
         <button id="watchEditStatusBtn_watching" onclick="watchPickStatus('watching','watchEdit')" class="wchip" style="flex:1">▶ Смотрю</button>
-        <button id="watchEditStatusBtn_done"     onclick="watchPickStatus('done','watchEdit')"     class="wchip" style="flex:1">✅ Готово</button>
+        <button id="watchEditStatusBtn_done"     onclick="watchPickStatus('done','watchEdit')"     class="wchip" style="flex:1">✓ Готово</button>
       </div>
     </div>
     <div class="btn-row"><button class="del-btn" onclick="delWatch(+document.getElementById('watchEditId').value);closeWatchEditModal()">УДАЛИТЬ</button><button class="add-btn" onclick="saveWatchEdit()">СОХРАНИТЬ</button></div>
@@ -992,7 +1154,6 @@
     <div class="mhead"><div class="mtitle" id="intCatModalTitle">новая категория</div></div>
     <input type="hidden" id="intCatEditId">
     <div class="field-row"><label class="field-label">Название</label><input class="field-inp" id="intCatName" placeholder="Экстрим, Музыка, Книги..." maxlength="30" onkeydown="if(event.key==='Enter')confirmIntCat()"></div>
-    <div class="field-row" style="display:none"><label class="field-label">Эмодзи (необязательно)</label><input class="field-inp" id="intCatEmoji" placeholder="🏔️" maxlength="4" onkeydown="if(event.key==='Enter')confirmIntCat()"></div>
     <div class="btn-row">
       <button class="del-btn" id="intCatDelBtn" style="display:none" onclick="delIntCat(document.getElementById('intCatEditId').value)">УДАЛИТЬ</button>
       <button class="add-btn" onclick="confirmIntCat()">СОХРАНИТЬ</button>
@@ -1023,21 +1184,21 @@
     <div class="field-row"><label class="field-label">Тип</label>
       <input type="hidden" id="watchType" value="film">
       <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <button id="watchTypeBtn_film"    onclick="watchPickType('film','watch')"    class="wchip">🎬 Фильм</button>
-        <button id="watchTypeBtn_series"  onclick="watchPickType('series','watch')"  class="wchip">📺 Сериал</button>
-        <button id="watchTypeBtn_anime"   onclick="watchPickType('anime','watch')"   class="wchip">✨ Аниме</button>
-        <button id="watchTypeBtn_cartoon" onclick="watchPickType('cartoon','watch')" class="wchip">🎨 Мульт</button>
-        <button id="watchTypeBtn_manga"   onclick="watchPickType('manga','watch')"   class="wchip">📖 Манга</button>
-        <button id="watchTypeBtn_dorama"  onclick="watchPickType('dorama','watch')"  class="wchip">🌸 Дорама</button>
-        <button id="watchTypeBtn_book"    onclick="watchPickType('book','watch')"    class="wchip">📚 Книги</button>
+        <button id="watchTypeBtn_film"    onclick="watchPickType('film','watch')"    class="wchip"><span class="ui-icon-host" data-ui-icon="film"></span> Фильм</button>
+        <button id="watchTypeBtn_series"  onclick="watchPickType('series','watch')"  class="wchip"><span class="ui-icon-host" data-ui-icon="screen"></span> Сериал</button>
+        <button id="watchTypeBtn_anime"   onclick="watchPickType('anime','watch')"   class="wchip"><span class="ui-icon-host" data-ui-icon="sparkles"></span> Аниме</button>
+        <button id="watchTypeBtn_cartoon" onclick="watchPickType('cartoon','watch')" class="wchip"><span class="ui-icon-host" data-ui-icon="palette"></span> Мульт</button>
+        <button id="watchTypeBtn_manga"   onclick="watchPickType('manga','watch')"   class="wchip"><span class="ui-icon-host" data-ui-icon="book"></span> Манга</button>
+        <button id="watchTypeBtn_dorama"  onclick="watchPickType('dorama','watch')"  class="wchip"><span class="ui-icon-host" data-ui-icon="heart"></span> Дорама</button>
+        <button id="watchTypeBtn_book"    onclick="watchPickType('book','watch')"    class="wchip"><span class="ui-icon-host" data-ui-icon="book"></span> Книги</button>
       </div>
     </div>
     <div class="field-row"><label class="field-label">Статус</label>
       <input type="hidden" id="watchStatus" value="want">
       <div style="display:flex;gap:6px">
-        <button id="watchStatusBtn_want"     onclick="watchPickStatus('want','watch')"     class="wchip" style="flex:1">🔖 Хочу</button>
+        <button id="watchStatusBtn_want"     onclick="watchPickStatus('want','watch')"     class="wchip" style="flex:1"><span class="ui-icon-host" data-ui-icon="bookmark"></span> Хочу</button>
         <button id="watchStatusBtn_watching" onclick="watchPickStatus('watching','watch')" class="wchip" style="flex:1">▶ Смотрю</button>
-        <button id="watchStatusBtn_done"     onclick="watchPickStatus('done','watch')"     class="wchip" style="flex:1">✅ Готово</button>
+        <button id="watchStatusBtn_done"     onclick="watchPickStatus('done','watch')"     class="wchip" style="flex:1">✓ Готово</button>
       </div>
     </div>
     <button class="add-btn" style="width:100%;margin-top:8px" onclick="confirmAddWatch()">ДОБАВИТЬ</button>
@@ -1058,7 +1219,7 @@
         <button onclick="clearHwEditPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--c2);border:1px solid var(--bd);border-radius:var(--rm);padding:10px 13px;font-size:13px;color:var(--t2)">
-        📷 Прикрепить фото
+        <span class="ui-icon-host" data-ui-icon="camera"></span> Прикрепить фото
         <input type="file" id="hwEditPhotoInput" accept="image/*" style="display:none" onchange="previewHwEditPhoto(this)">
       </label>
     </div>
@@ -1126,6 +1287,7 @@
 <div class="modal-bg" id="habitEditModal" onclick="if(event.target===this)closeHabitEditModal()">
   <div class="modal">
     <div class="mhead"><div class="mtitle">изменить привычку</div></div>
+    <div class="field-row"><label class="field-label">Значок</label><div class="habit-icon-picker" id="habitEditIconPicker" aria-label="Значок привычки"></div></div>
     <div class="field-row"><label class="field-label">Название</label><input class="field-inp" id="habitEditInp" placeholder="Название привычки..." maxlength="40" onkeydown="if(event.key==='Enter')document.getElementById('habitEditDescInp').focus()"></div>
     <div class="field-row"><label class="field-label">Описание (необязательно)</label><textarea class="field-inp" id="habitEditDescInp" placeholder="Что входит в эту привычку..." maxlength="300" style="height:80px;resize:none"></textarea></div>
     <div class="btn-row"><button class="del-btn" onclick="delHabit(_habitEditId);closeHabitEditModal()">УДАЛИТЬ</button><button class="add-btn" onclick="saveHabitEdit()">СОХРАНИТЬ</button></div>
@@ -1138,6 +1300,7 @@
     <div class="mhead"><div class="mtitle" id="finEntryTitle">добавить запись</div></div>
     <div class="field-row"><label class="field-label">Сумма (₽)</label><input class="field-inp" type="number" id="finEntryAmount" placeholder="0" min="0"></div>
     <div class="field-row"><label class="field-label">Описание</label><input class="field-inp" id="finEntryDesc" placeholder="Зарплата, кофе..."></div>
+    <div class="field-row"><label class="field-label">Дата</label><input class="field-inp" type="date" id="finEntryDate"></div>
     <button class="add-btn" style="width:100%;margin-top:8px" onclick="confirmFinEntry()">ДОБАВИТЬ</button>
   </div>
 </div>
@@ -1148,6 +1311,43 @@
     <div class="field-row"><label class="field-label">Название</label><input class="field-inp" id="finTplName" placeholder="Аренда, зарплата..."></div>
     <div class="field-row"><label class="field-label">Сумма (₽)</label><input class="field-inp" type="number" id="finTplAmount" placeholder="0" min="0"></div>
     <div class="btn-row"><button class="del-btn" id="finTplDelBtn" style="display:none" onclick="delFinTpl(_finTplEditPeriod,_finTplEditType,_finTplEditId);closeFinTplModal()">УДАЛИТЬ</button><button class="add-btn" onclick="confirmFinTpl()">ДОБАВИТЬ</button></div>
+  </div>
+</div>
+<!-- Finance capital modal -->
+<div class="modal-bg" id="finCapitalModal" onclick="if(event.target===this)closeFinCapitalModal()">
+  <div class="modal">
+    <div class="mhead"><div class="mtitle">стартовый капитал</div></div>
+    <div class="field-row"><label class="field-label">Сумма (₽)</label><input class="field-inp" type="number" id="finCapital0Inp" placeholder="0" min="0"></div>
+    <div class="btn-row"><button class="add-btn" style="width:100%;margin-top:8px" onclick="confirmFinCapital0()">СОХРАНИТЬ</button></div>
+  </div>
+</div>
+<!-- Finance asset modal -->
+<div class="modal-bg" id="finAssetModal" onclick="if(event.target===this)closeFinAssetModal()">
+  <div class="modal">
+    <div class="mhead"><div class="mtitle" id="finAssetTitle">актив</div></div>
+    <input type="hidden" id="finAssetId">
+    <div class="field-row"><label class="field-label">Название</label><input class="field-inp" id="finAssetName" placeholder="Квартира, автомобиль..."></div>
+    <div class="field-row"><label class="field-label">Категория</label>
+      <select class="field-inp" id="finAssetCategory">
+        <option value="Недвижимость">Недвижимость</option>
+        <option value="Транспорт">Транспорт</option>
+        <option value="Движимое имущество">Движимое имущество</option>
+        <option value="Другое">Другое</option>
+      </select>
+    </div>
+    <div class="field-row"><label class="field-label">Текущая стоимость (₽)</label><input class="field-inp" type="number" id="finAssetValue" placeholder="0" min="0" step="0.01"></div>
+    <div class="field-row"><label class="field-label">Изменение стоимости за период (%)</label><input class="field-inp" type="number" id="finAssetRate" placeholder="Например, 2 или -1.5" step="0.01"></div>
+    <div class="field-row"><label class="field-label">Период изменения</label>
+      <select class="field-inp" id="finAssetPeriod">
+        <option value="month">Месяц</option>
+        <option value="week">Неделя</option>
+        <option value="month3">3 месяца</option>
+        <option value="halfYear">Полгода</option>
+        <option value="year">Год</option>
+      </select>
+    </div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--t3);line-height:1.5">Положительный процент увеличивает стоимость, отрицательный — уменьшает. Пересчёт выполняется при наступлении каждого нового периода.</div>
+    <div class="btn-row"><button class="del-btn" id="finAssetDelBtn" style="display:none" onclick="delFinAsset()">УДАЛИТЬ</button><button class="add-btn" onclick="confirmFinAsset()">СОХРАНИТЬ</button></div>
   </div>
 </div>
 <!-- Finance purchase modal -->
@@ -1187,7 +1387,13 @@
 <div class="modal-bg" id="pieExpandModal" onclick="if(event.target===this)closePieExpand()">
   <div class="modal" style="max-height:85vh;overflow-y:auto">
     <div class="mhead"><div class="mtitle">детали диаграммы</div></div>
-    <canvas id="finPieCanvasExpand" width="280" height="280" style="display:block;margin:0 auto 16px;max-width:280px"></canvas>
+    <div class="pie-chart-wrap pie-chart-wrap-expanded">
+      <canvas id="finPieCanvasExpand" width="280" height="280"></canvas>
+      <div class="pie-center">
+        <strong>100%</strong>
+        <label><input id="finPieSumInputExpand" type="number" min="0" step="1" inputmode="decimal" placeholder="Сумма" aria-label="Общая сумма для распределения в рублях" oninput="updateFinPieSum(this.value)" onclick="event.stopPropagation()"><span>₽</span></label>
+      </div>
+    </div>
     <div id="finPieLegendExpand"></div>
   </div>
 </div>
@@ -1209,12 +1415,12 @@
     <div class="mhead"><div class="mtitle" id="skillsModalTitle">новый шаблон</div></div>
     <input type="hidden" id="skillsModalId" value="">
     <div class="field-row"><label class="field-label">Название</label><input class="field-inp" id="skillsModalName" placeholder="Грудь + трицепс..." maxlength="60"></div>
-    <div class="field-row"><label class="field-label" id="skillsModalExLabel">Упражнения / шаги</label><textarea class="field-inp" id="skillsModalEx" placeholder="Жим, Разводка, Трицепс на блоке..." style="height:80px;resize:none"></textarea></div>
+    <div class="field-row" id="skillsModalExRow"><label class="field-label" id="skillsModalExLabel">Упражнения / шаги</label><textarea class="field-inp" id="skillsModalEx" placeholder="Жим, Разводка, Трицепс на блоке..." style="height:80px;resize:none"></textarea></div>
     <div class="field-row">
       <label class="field-label">Тип навыка</label>
       <div style="display:flex;gap:6px;margin-top:4px">
-        <div id="skillsTypePhysical" onclick="skillsSelectType('physical')" style="flex:1;text-align:center;padding:10px 0;border-radius:var(--rm);border:1px solid var(--ab);background:var(--a2);font-family:var(--mono);font-size:12px;color:var(--a);cursor:pointer;user-select:none;transition:.12s">🏋 физический</div>
-        <div id="skillsTypeMental" onclick="skillsSelectType('mental')" style="flex:1;text-align:center;padding:10px 0;border-radius:var(--rm);border:1px solid var(--bd);background:var(--c2);font-family:var(--mono);font-size:12px;color:var(--t2);cursor:pointer;user-select:none;transition:.12s">🧠 умственный</div>
+        <div id="skillsTypePhysical" onclick="skillsSelectType('physical')" style="flex:1;text-align:center;padding:10px 0;border-radius:var(--rm);border:1px solid var(--ab);background:var(--a2);font-family:var(--mono);font-size:12px;color:var(--a);cursor:pointer;user-select:none;transition:.12s"><span class="ui-icon-host" data-ui-icon="dumbbell"></span> физический</div>
+        <div id="skillsTypeMental" onclick="skillsSelectType('mental')" style="flex:1;text-align:center;padding:10px 0;border-radius:var(--rm);border:1px solid var(--bd);background:var(--c2);font-family:var(--mono);font-size:12px;color:var(--t2);cursor:pointer;user-select:none;transition:.12s"><span class="ui-icon-host" data-ui-icon="brain"></span> умственный</div>
       </div>
       <input type="hidden" id="skillsModalType" value="physical">
     </div>
@@ -1246,6 +1452,21 @@
       </div>
     </div>
 
+    <!-- Паттерн недели (умственное) -->
+    <div class="field-row" id="skillsPatternSection" style="display:none">
+      <label class="field-label">Паттерн недели (категории + отношение)</label>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+        <div id="skillsPatternWrap" style="display:flex;flex-direction:column;gap:6px">
+          <!-- категории рендерятся JS; шаги редактируются в поле выше -->
+        </div>
+        <button onclick="skillsPatternAddRow()" style="margin-top:4px;padding:6px 12px;border-radius:var(--rm);border:1px solid var(--a);background:var(--a2);font-family:var(--mono);font-size:11px;color:var(--a);cursor:pointer;user-select:none;transition:.12s">+ добавить категорию</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <label class="field-label" style="flex:2">Отношение (сколько недель длится каждая категория, через : )</label>
+          <input class="field-inp" id="skillsPatternRatio" placeholder="2:1" style="flex:3">
+        </div>
+      </div>
+    </div>
+
     <!-- Дни недели: мультивыбор, физ. и умств. накладываются -->
     <div class="field-row">
       <label class="field-label">Дни недели</label>
@@ -1271,7 +1492,7 @@
     <div class="field-row">
       <label class="field-label">Фото / видео</label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--c2);border:1px solid var(--bd);border-radius:var(--rm);padding:10px 13px;font-size:13px;color:var(--t2)">
-        📎 Прикрепить файлы
+        <span class="ui-icon-host" data-ui-icon="clip"></span> Прикрепить файлы
         <input type="file" id="skillsModalFiles" accept="image/*,video/*" multiple style="display:none" onchange="onSkillsModalFiles(this)">
       </label>
       <div id="skillsModalPreviews" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
@@ -1286,8 +1507,8 @@
     <div style="font-size:15px;padding:8px 0 4px;color:var(--t);font-weight:600" id="aiCardChoiceTitle">AI-карта</div>
     <div style="font-size:12px;color:var(--t2);padding:4px 0 20px;line-height:1.5" id="aiCardChoiceSubtitle">Выберите режим экспорта</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button id="aiCardChoiceFull" class="add-btn" style="width:100%">📄 Полное</button>
-      <button id="aiCardChoiceBase" class="add-btn" style="width:100%;color:var(--a)">⚡ Базовое <span style="font-size:10px;opacity:.6">без медиа и чеклистов</span></button>
+      <button id="aiCardChoiceFull" class="add-btn" style="width:100%"><span class="ui-icon-host" data-ui-icon="page"></span> Полное</button>
+      <button id="aiCardChoiceBase" class="add-btn" style="width:100%;color:var(--a)"><span class="ui-icon-host" data-ui-icon="bolt"></span> Базовое <span style="font-size:10px;opacity:.6">без медиа и чеклистов</span></button>
       <button id="aiCardChoiceCancel" class="add-btn" style="width:100%;color:var(--t2);border-color:var(--bd)">Отмена</button>
     </div>
   </div>
@@ -1306,7 +1527,7 @@
 <!-- Google Drive: сессия истекла -->
 <div class="modal-bg" id="gdriveSessionModal" style="align-items:center;justify-content:center" onclick="if(event.target===this)closeGdriveSessionModal()">
   <div class="modal" style="border-radius:18px;max-width:300px;text-align:center;padding:24px 20px">
-    <div style="width:52px;height:52px;border-radius:50%;background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px">☁</div>
+    <div style="width:52px;height:52px;border-radius:50%;background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--amber)"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a5 5 0 1 1 .8-9.9A6 6 0 0 1 19 10a4 4 0 0 1 0 8H7Z"/></svg></div>
     <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t);margin-bottom:8px">Сессия Google истекла</div>
     <div style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:20px">Автосохранение в Drive приостановлено. Войди снова, чтобы продолжить.</div>
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -1354,7 +1575,7 @@
       </select>
     </div>
     <div style="font-size:11px;color:var(--t3);font-family:var(--mono);padding:0 0 8px;line-height:1.6">
-      💡 Если указан «последний раз» + повтор — следующая дата считается автоматически
+      <span class="ui-icon-host" data-ui-icon="bulb"></span> Если указан «последний раз» + повтор — следующая дата считается автоматически
     </div>
     <div class="btn-row"><button class="del-btn" onclick="delAnnual(_annualEditId);closeAnnualEditModal()">УДАЛИТЬ</button><button class="add-btn" onclick="confirmAnnualEdit()">СОХРАНИТЬ</button></div>
   </div>

@@ -102,13 +102,45 @@ yearlyCleanup();
 
 
 function clearToday(){showConfirm('Сбросить задачи сегодня?',()=>{tasks[nowDK()]=[];LS.s('tasks',tasks);renderTodayTasks(new Date());});}
-function clearAll(){showConfirm('⚠️ Сбросить АБСОЛЮТНО ВСЁ? Все данные, настройки и история будут удалены безвозвратно.',()=>{LS.reset().then(()=>location.reload());});}
+function clearAll(){showConfirm('ВНИМАНИЕ: сбросить АБСОЛЮТНО ВСЁ? Все данные, настройки и история будут удалены безвозвратно.',()=>{LS.reset().then(()=>location.reload());});}
+function clearFinanceSettings(){
+  showConfirm('Сбросить финансовые настройки? Будут удалены планы и шаблоны, бюджет, стартовый капитал, активы и категории диаграммы. Записи доходов и расходов, покупки и долги останутся.',()=>{
+    finTpl={week:{income:[],expense:[]},month:{income:[],expense:[]},month3:{income:[],expense:[]},halfYear:{income:[],expense:[]},year:{income:[],expense:[]}};
+    finPlans={};
+    finPieSlices=[];
+    finPieSum=0;
+    finPieMode='%';
+    finCapital0=0;
+    finAssets=[];
+    finAssetHistory=[];
+    LS.s('finTpl',finTpl);
+    LS.s('finPlans',finPlans);
+    LS.s('finPieSlices',finPieSlices);
+    LS.s('finPieSum',finPieSum);
+    LS.s('finPieMode',finPieMode);
+    LS.s('finCapital0',finCapital0);
+    LS.s('finAssets',finAssets);
+    LS.s('finAssetHistory',finAssetHistory);
+    LS.del('finBudget');
+    ['week','month','month3','halfYear','year'].forEach(period=>LS.del('finLastPlan_'+period));
+    if(typeof renderFinance==='function')renderFinance();
+    flash('Финансовые настройки сброшены');
+  },null,'Да','Нет');
+}
+function clearFinanceHistory(){
+  showConfirm('Сбросить историю доходов и расходов? Покупки, долги, планы и финансовые настройки останутся.',()=>{
+    finLog={};
+    LS.s('finLog',finLog);
+    if(typeof renderFinance==='function')renderFinance();
+    flash('История доходов и расходов очищена');
+  },null,'Да','Нет');
+}
 const WATCH_TYPES=[
-  {v:'film',l:'🎬 Фильм'},{v:'series',l:'📺 Сериал'},{v:'anime',l:'✨ Аниме'},
-  {v:'cartoon',l:'🎨 Мульт'},{v:'manga',l:'📖 Манга'},{v:'dorama',l:'🌸 Дорама'},{v:'book',l:'📚 Книги'}
+  {v:'film',l:'Фильм'},{v:'series',l:'Сериал'},{v:'anime',l:'Аниме'},
+  {v:'cartoon',l:'Мульт'},{v:'manga',l:'Манга'},{v:'dorama',l:'Дорама'},{v:'book',l:'Книги'}
 ];
 const WATCH_STATUSES=[
-  {v:'want',l:'🔖 Хочу'},{v:'watching',l:'▶ Смотрю'},{v:'done',l:'✅ Готово'}
+  {v:'want',l:'Хочу'},{v:'watching',l:'Смотрю'},{v:'done',l:'Готово'}
 ];
 function watchPickType(val,prefix){
   const hid=document.getElementById(prefix+'Type');if(hid)hid.value=val;
@@ -194,7 +226,7 @@ function doWatchSearch(q){
           <div style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap">
             <span style="font-family:var(--mono);font-size:9px;color:var(--t3)">${typeLabel[w.type]||w.type}</span>
             <span style="font-family:var(--mono);font-size:9px;color:${sColor[w.status]}">${sLabel[w.status]}</span>
-            ${isDupe&&!ignored?'<span style="font-family:var(--mono);font-size:9px;color:var(--amber)">⚠ дубликат</span>':''}
+            ${isDupe&&!ignored?`<span style="font-family:var(--mono);font-size:9px;color:var(--amber)">${uiIconSvg('alert')} дубликат</span>`:''}
           </div>
         </div>
         <button onclick="delWatchFromSearch(${w.id})" style="background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:2px 5px">✕</button>
@@ -245,11 +277,23 @@ function confirmEditHw(){
   renderMemoBody();
 }
 
-function exportJSON(){const data={habits,comp,habEnabled:[...habEnabled],tasks,permanentTasks,goals,freeGoals,annuals,routine,routineLog,weekRtLog,monthRtLog,yearRtLog,tplDone,health,hLog,supps,meds,weights,birthdays,homework,notes,watchlist,sportTemplates:skillTemplates,skillTemplates,finLog,finTpl,finPurchases,finDebts,finPieSlices,nid,physDiseases,physParams,mentalParams,morningTime:mTime,eveningTime:eTime,sleepSchedule:LS.g('sleepSchedule',{bed:'23:00',wake:'05:00',naps:[]}),cycleFirstWeekHeavy,cycleOverrides,notifCfg:LS.g('notifCfg',{}),remindersCfg:LS.g('remindersCfg',{}),interests:LS.g('interests',{cats:[],items:[]}),finBudget:LS.g('finBudget',0),sleepRem:LS.g('sleepRem',{on:false,time:'22:30'}),aiProfile:LS.g('aiProfile',{}),appTheme,appFont,appLang,autoSaveOn,notifyOn};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`logos_${new Date().toISOString().slice(0,10)}.json`;a.click();}
-function importJSON(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);['habits','comp','tasks','permanentTasks','goals','freeGoals','annuals','routine','routineLog','weekRtLog','monthRtLog','yearRtLog','tplDone','health','hLog','supps','meds','weights','birthdays','homework','notes','watchlist','finLog','finTpl','finPurchases','finDebts','finPieSlices','nid','physDiseases','physParams','mentalParams'].forEach(k=>{if(d[k]!==undefined){window[k]=d[k];LS.s(k,d[k]);}});
+function exportJSON(){const data={habits,comp,habEnabled:[...habEnabled],tasks,permanentTasks,goals,freeGoals,annuals,routine,routineLog,weekRtLog,monthRtLog,yearRtLog,tplDone,health,hLog,supps,meds,weights,birthdays,homework,notes,watchlist,eduSchedule,eduSubjects,eduLinks,eduWeekParity,eduWeekAnchor,eduBells,sportTemplates:skillTemplates,skillTemplates,finLog,finTpl,finPlans,finCapital0,finPurchases,finDebts,finAssets,finAssetHistory,finPieSlices,finPieSum,nid,physDiseases,physParams,mentalParams,morningTime:mTime,eveningTime:eTime,sleepSchedule:LS.g('sleepSchedule',{bed:'23:00',wake:'05:00',naps:[]}),cycleFirstWeekHeavy,cycleOverrides,notifCfg:LS.g('notifCfg',{}),remindersCfg:LS.g('remindersCfg',{}),interests:LS.g('interests',{cats:[],items:[]}),finBudget:LS.g('finBudget',0),sleepRem:LS.g('sleepRem',{on:false,time:'22:30'}),aiProfile:LS.g('aiProfile',{}),appTheme,appFont,appLang,autoSaveOn,notifyOn};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`logos_${new Date().toISOString().slice(0,10)}.json`;a.click();}
+function importJSON(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);['habits','comp','tasks','permanentTasks','goals','freeGoals','annuals','routine','routineLog','weekRtLog','monthRtLog','yearRtLog','tplDone','health','hLog','supps','meds','weights','birthdays','homework','notes','watchlist','eduSchedule','eduSubjects','eduLinks','eduWeekParity','eduWeekAnchor','eduBells','finLog','finTpl','finPlans','finCapital0','finPurchases','finDebts','finAssets','finAssetHistory','finPieSlices','finPieSum','nid','physDiseases','physParams','mentalParams'].forEach(k=>{if(d[k]!==undefined){window[k]=d[k];LS.s(k,d[k]);}});
+if(d.finLog!==undefined){finLog=d.finLog;LS.s('finLog',finLog);}
+if(d.finTpl!==undefined){finTpl=d.finTpl;LS.s('finTpl',finTpl);}
+if(d.finPlans!==undefined){finPlans=d.finPlans;LS.s('finPlans',finPlans);}
+else if(d.finTpl!==undefined){finEnsurePlan(finCurPlanKey());finSyncPlanFromTpl();}
+if(d.finPlans!==undefined)finEnsurePlan(finCurPlanKey());
+if(d.finCapital0!==undefined){finCapital0=d.finCapital0;LS.s('finCapital0',finCapital0);}
+if(d.finDebts!==undefined){finDebts=Array.isArray(d.finDebts)?d.finDebts:[];LS.s('finDebts',finDebts);}
 // ── skillTemplates: fix key mismatch (exported as skillTemplates, stored as sportTemplates) ──
 const _tpls=d.sportTemplates||d.skillTemplates;
 if(_tpls!==undefined){skillTemplates=_tpls;LS.s('sportTemplates',_tpls);LS.s('skillTemplates',_tpls);}
+if(d.finPieSlices!==undefined){finPieSlices=d.finPieSlices;LS.s('finPieSlices',finPieSlices);}
+if(d.finPieSum!==undefined){finPieSum=Math.max(0,Number(d.finPieSum)||0);LS.s('finPieSum',finPieSum);}
+if(d.finPurchases!==undefined){finPurchases=Array.isArray(d.finPurchases)?d.finPurchases:[];LS.s('finPurchases',finPurchases);}
+if(d.finAssets!==undefined){finAssets=Array.isArray(d.finAssets)?d.finAssets:[];LS.s('finAssets',finAssets);}
+if(d.finAssetHistory!==undefined){finAssetHistory=Array.isArray(d.finAssetHistory)?d.finAssetHistory:[];LS.s('finAssetHistory',finAssetHistory);}
 if(d.habEnabled!==undefined){habEnabled=new Set(d.habEnabled);LS.s('habEnabled',d.habEnabled);}if(d.morningTime!==undefined){mTime=d.morningTime;LS.s('morningTime',mTime);}if(d.eveningTime!==undefined){eTime=d.eveningTime;LS.s('eveningTime',eTime);}if(d.sleepSchedule!==undefined){LS.s('sleepSchedule',d.sleepSchedule);}
 if(d.cycleStartDate!==undefined){LS.s('cycleStartDate',d.cycleStartDate);}
 if(d.cycleStartSlot!==undefined){LS.s('cycleStartSlot',d.cycleStartSlot);}
@@ -270,14 +314,31 @@ if(d.notifyOn!==undefined){notifyOn=d.notifyOn;LS.s('notifyOn',d.notifyOn);}
 if(d.routine!==undefined){routine=d.routine;}
 if(d.routineLog!==undefined){routineLog=d.routineLog;}
 if(d.tplDone!==undefined){tplDone=d.tplDone;}
+if(d.eduSchedule!==undefined){eduSchedule=d.eduSchedule;}
+if(d.eduSubjects!==undefined){eduSubjects=d.eduSubjects;}
+if(d.eduLinks!==undefined){eduLinks=d.eduLinks;}
+if(d.eduWeekParity!==undefined){eduWeekParity=d.eduWeekParity;}
+if(d.eduWeekAnchor!==undefined){eduWeekAnchor=d.eduWeekAnchor;}
+if(d.eduBells!==undefined){eduBells=d.eduBells;}
 if(typeof migrateRoutine==='function')migrateRoutine();
 flash('✓ Данные импортированы');renderCurrent();setTimeout(initNapSessions,100);}catch{flash('Ошибка импорта');}};r.readAsText(f);}
 
 // ══ NAV ════════════════════════════════════════════════
 function goPage(name,btn){
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  const previousPage=curPage;
+  const nav=document.querySelector('.nav');
+  const pageButtons=nav?Array.from(nav.querySelectorAll('.nb[id^="nb-"]')):[];
+  const previousIndex=pageButtons.findIndex(button=>button.id==='nb-'+previousPage);
+  const nextIndex=pageButtons.findIndex(button=>button.id==='nb-'+name);
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on','enter-forward','enter-backward'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  const pg=document.getElementById('pg-'+name);if(pg)pg.classList.add('on');
+  const pg=document.getElementById('pg-'+name);
+  if(pg){
+    pg.classList.add('on');
+    if(previousPage!==name&&previousIndex>=0&&nextIndex>=0){
+      pg.classList.add(nextIndex>previousIndex?'enter-forward':'enter-backward');
+    }
+  }
   // Activate real button + all clones of this page
   const realBtn=document.getElementById('nb-'+name);
   if(realBtn)realBtn.classList.add('on');
@@ -286,7 +347,6 @@ function goPage(name,btn){
   if(name==='memo'&&pinState==='enter'){memoUnlocked=false;curMemoTab='birthdays';}
   renderCurrent();
   // Scroll real nav button into center view
-  const nav=document.querySelector('.nav');
   if(realBtn&&nav){
     // Тап по клону из бесконечной ленты: кнопка уже под пальцем — не перелистываем
     // (раньше панель ехала к НАСТОЯЩЕЙ кнопке через весь набор и «крутилась по кругу»)
@@ -452,21 +512,32 @@ function scheduleSleepRem(){if(Notification.permission!=='granted')return;const 
 // ══ SWIPE NAVIGATION ═══════════════════════════════════
 (function initSwipe(){
   const pages=['today','routine','week','goals','habits','health','skills','finance','memo','settings'];
-  let touchStartY=0,touchStartX=0,touchStartTime=0,touchStartEl=null;
+  let touchStartY=0,touchStartX=0,touchStartTime=0,touchStartEl=null,touchStartWeekInteraction=false;
+  const swipeExcludedSelector=[
+    '.nav','#weekScroll','.week-nav','.dc-task','.dc-footer','.dc-tpl-list','.modal-bg',
+    'button','a','input','textarea','select','[onclick]','[contenteditable="true"]','[role="button"]'
+  ].join(',');
+  const weekInteractionSelector='#weekScroll .dc-tasks,#weekScroll .dc-footer,#weekScroll .dc-tpl-list';
   document.addEventListener('touchstart',e=>{
     touchStartY=e.touches[0].clientY;
     touchStartX=e.touches[0].clientX;
     touchStartTime=Date.now();
     touchStartEl=e.target;
+    touchStartWeekInteraction=!!(touchStartEl&&touchStartEl.closest(weekInteractionSelector));
   },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!touchStartWeekInteraction||e.touches.length!==1)return;
+    const dx=e.touches[0].clientX-touchStartX;
+    const dy=e.touches[0].clientY-touchStartY;
+    if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy))e.preventDefault();
+  },{passive:false});
   document.addEventListener('touchend',e=>{
     const dy=touchStartY-e.changedTouches[0].clientY;
     const dx=touchStartX-e.changedTouches[0].clientX;
     const dt=Date.now()-touchStartTime;
-    // Don't trigger page-swipe if touch started inside the week scroll (user is scrolling day cards)
-    if(touchStartEl&&touchStartEl.closest('#weekScroll'))return;
-    // Don't trigger page-swipe if touch started inside the nav bar (user is scrolling nav)
-    if(touchStartEl&&touchStartEl.closest('.nav'))return;
+    // Gestures on controls, task rows, the week carousel, or a modal belong to those elements.
+    if(document.documentElement.classList.contains('modal-open'))return;
+    if(touchStartEl&&touchStartEl.closest(swipeExcludedSelector))return;
     // horizontal swipe: left = next page, right = prev page
     if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5&&dt<450){
       const idx=pages.indexOf(curPage);
@@ -476,6 +547,11 @@ function scheduleSleepRem(){if(Notification.permission!=='granted')return;const 
         goPage(pages[next],btn);
       }
     }
+    touchStartWeekInteraction=false;
+  },{passive:true});
+  document.addEventListener('touchcancel',()=>{
+    touchStartEl=null;
+    touchStartWeekInteraction=false;
   },{passive:true});
 })();
 
@@ -540,7 +616,7 @@ function getDeadlineColor(days, scale){
     if(days<=30)return '#4ade80'; // зелёный
     return null;
   } else if(isHW){
-    // ДЗ: шкала 3 дня — 3д=🟢, 2д=🟡, 1д=🟠, 0д=🔴
+    // ДЗ: шкала дедлайна — от зелёного к красному.
     if(days===1)return '#f97316'; // тёмно-оранжевый
     if(days===2)return '#fbbf24'; // жёлтый
     if(days===3)return '#4ade80'; // зелёный
@@ -589,7 +665,7 @@ function collectNotifications(){
     const color=getDeadlineColor(days,true);
     if(!color)return;
     notifs.push({
-      id:'goal_'+g.id, name:g.name, days, color, type:'longterm', icon:'🎯',
+      id:'goal_'+g.id, name:g.name, days, color, type:'longterm', icon:'target',
       label:days<0?'просрочено':days===0?'сегодня дедлайн':days===1?'завтра дедлайн':'до дедлайна '+days+'д.'
     });
   });
@@ -603,8 +679,8 @@ function collectNotifications(){
     const color=getDeadlineColor(days,true);
     if(!color)return;
     notifs.push({
-      id:'bd_'+b.id, name:b.name, days, color, type:'longterm', icon:'🎂',
-      label:days===0?'🎉 сегодня ДР!':days===1?'завтра ДР':'через '+days+'д. ДР'
+      id:'bd_'+b.id, name:b.name, days, color, type:'longterm', icon:'cake',
+      label:days===0?'сегодня ДР!':days===1?'завтра ДР':'через '+days+'д. ДР'
     });
   });
 
@@ -619,7 +695,7 @@ function collectNotifications(){
     const color=getDeadlineColor(days,true);
     if(!color)return;
     notifs.push({
-      id:'annual_'+a.id, name:a.name, days, color, type:'longterm', icon:'📅',
+      id:'annual_'+a.id, name:a.name, days, color, type:'longterm', icon:'calendar',
       label:days<0?'просрочено':days===0?'сегодня':days===1?'завтра':days+'д.'
     });
   });
@@ -635,7 +711,7 @@ function collectNotifications(){
     const color=getDeadlineColor(days,'hw');
     if(!color)return;
     notifs.push({
-      id:'hw_'+h.id, name:h.subj+': '+h.task.slice(0,30), days, color, type:'shortterm', icon:'📚',
+      id:'hw_'+h.id, name:h.subj+': '+h.task.slice(0,30), days, color, type:'shortterm', icon:'book',
       label:days<0?'просрочено':days===0?'сегодня сдать':days===1?'завтра сдать':days+'д. до сдачи'
     });
   });
@@ -649,7 +725,7 @@ function collectNotifications(){
     const color=getDeadlineColor(days,'week');
     if(!color)return;
     notifs.push({
-      id:'watch_'+w.id, name:w.name, days, color, type:'shortterm', icon:'🎬',
+      id:'watch_'+w.id, name:w.name, days, color, type:'shortterm', icon:'film',
       label:days<0?'просрочено':days===0?'дедлайн сегодня':days===1?'дедлайн завтра':days+'д. до дедлайна'
     });
   });
@@ -666,11 +742,11 @@ function collectNotifications(){
       else{msg=daysToNY+'д. до Нового года';color='#4ade80';}
     } else {
       const left=5-d;
-      if(d===1){msg='С Новым годом! 🎉';color='#ef4444';}
+      if(d===1){msg='С Новым годом!';color='#ef4444';}
       else if(left<=0){msg='Конец каникул сегодня';color='#ef4444';}
       else{msg='Каникулы: ещё '+left+'д.';color='#4ade80';}
     }
-    notifs.push({id:'newyear',name:msg,days:mo===11?32-d:5-d,color,type:'shortterm',icon:'🎄',label:'Новый год'});
+    notifs.push({id:'newyear',name:msg,days:mo===11?32-d:5-d,color,type:'shortterm',icon:'tree',label:'Новый год'});
   })();
 
   // ── НОВАЯ НЕДЕЛЯ (сб/вс/пн) ──
@@ -679,19 +755,19 @@ function collectNotifications(){
     if(dow===6){
       // Суббота — зелёное предупреждение
       notifs.push({
-        id:'week_sat', name:'Новая неделя приближается', days:2, color:'#4ade80', type:'shortterm', icon:'📅',
+        id:'week_sat', name:'Новая неделя приближается', days:2, color:'#4ade80', type:'shortterm', icon:'calendar',
         label:'послезавтра новая неделя'
       });
     } else if(dow===0){
       // Воскресенье — жёлтое предупреждение
       notifs.push({
-        id:'week_sun', name:'Завтра новая неделя', days:1, color:'#fbbf24', type:'shortterm', icon:'📅',
+        id:'week_sun', name:'Завтра новая неделя', days:1, color:'#fbbf24', type:'shortterm', icon:'calendar',
         label:'завтра начинается новая неделя'
       });
     } else if(dow===1){
       // Понедельник — красное, начало недели
       notifs.push({
-        id:'week_mon', name:'Начало новой недели!', days:0, color:'#ef4444', type:'shortterm', icon:'🚀',
+        id:'week_mon', name:'Начало новой недели!', days:0, color:'#ef4444', type:'shortterm', icon:'rocket',
         label:'сегодня начало новой недели'
       });
     }
@@ -716,7 +792,7 @@ function collectNotifications(){
     else{monthName='Скоро новый месяц';}
     notifs.push({
       id:'month_newmonth', name:monthName,
-      days:daysLeft, color, type:'shortterm', icon:'📅', label
+      days:daysLeft, color, type:'shortterm', icon:'calendar', label
     });
   })();
 
@@ -813,7 +889,7 @@ function renderNotificationsPanel(){
         onmouseleave="this.style.background=''"
         style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;border-radius:6px;transition:background .15s">
         <div style="width:7px;height:7px;border-radius:50%;background:${n.color};flex-shrink:0;box-shadow:0 0 5px ${n.color}88"></div>
-        <div style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.icon} ${n.name}</div>
+        <div style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uiIconSvg(n.icon)} ${n.name}</div>
         <div style="font-family:var(--mono);font-size:10px;color:${n.color};font-weight:600;flex-shrink:0;white-space:nowrap">${n.label}</div>
       </div>`).join('');
     panel.innerHTML=`
@@ -953,6 +1029,7 @@ const T = {
     's-data-lbl':'данные','s-export-lbl':'Экспорт JSON','s-export-sub':'Скачать все данные','s-export-btn':'↓ JSON',
     's-import-lbl':'Импорт JSON','s-import-btn':'↑ JSON',
     's-reset-lbl':'сброс','s-reset-btn':'СБРОСИТЬ ЗАДАЧИ СЕГОДНЯ','s-reset-all-btn':'СБРОСИТЬ ВСЁ',
+    's-reset-fin-settings-btn':'СБРОСИТЬ НАСТРОЙКИ ФИНАНСОВ','s-reset-fin-history-btn':'СБРОСИТЬ ИСТОРИЮ ФИНАНСОВ',
     's-autosave-lbl':'Автосохранение','s-autosave-sub':'В Google Drive каждые 2 минуты',
     's-gdrive-lbl':'google drive','s-gdrive-name':'Google Drive',
     's-gdrive-save-lbl':'Сохранить в Drive','s-gdrive-save-sub':'Загрузить текущий бэкап',
@@ -963,13 +1040,13 @@ const T = {
     's-notif-lbl':'уведомления',
     'notif-lbl':'Уведомления','notif-perm-granted':'Разрешены браузером','notif-perm-denied':'Заблокированы в браузере','notif-perm-ask':'Нажми включить',
     'notif-off-btn':'ВЫКЛ','notif-on-btn':'ВКЛЮЧИТЬ',
-    'notif-deadlines':'⏰ Дедлайны целей','notif-deadlines-sub':'За 30/15/7/3/1/0 дней до срока',
-    'notif-weekly':'📋 Начало недели','notif-weekly-sub':'Сб, Вс и Пн',
-    'notif-monthly':'📅 Начало месяца','notif-monthly-sub':'За 3/1/0 дней до конца',
-    'notif-birthday':'🎂 Дни рождения','notif-birthday-sub':'За 15/7/3/1/0 дней',
-    'notif-newyear':'🎄 Новый год','notif-newyear-sub':'25 дек — 5 янв',
-    'notif-homework':'📚 Домашние задания','notif-homework-sub':'За 3 дня до сдачи',
-    'notif-watchlist':'🎬 Вотчлист','notif-watchlist-sub':'За 7 дней до дедлайна',
+    'notif-deadlines':'Дедлайны целей','notif-deadlines-sub':'За 30/15/7/3/1/0 дней до срока',
+    'notif-weekly':'Начало недели','notif-weekly-sub':'Сб, Вс и Пн',
+    'notif-monthly':'Начало месяца','notif-monthly-sub':'За 3/1/0 дней до конца',
+    'notif-birthday':'Дни рождения','notif-birthday-sub':'За 15/7/3/1/0 дней',
+    'notif-newyear':'Новый год','notif-newyear-sub':'25 дек — 5 янв',
+    'notif-homework':'Домашние задания','notif-homework-sub':'За 3 дня до сдачи',
+    'notif-watchlist':'Вотчлист','notif-watchlist-sub':'За 7 дней до дедлайна',
     'reminders-lbl':'Напоминалки','reminders-sub':'В приложении, без уведомлений',
     'reminder-weight':'⚖ Взвешивание','reminder-weight-sub':'При открытии Здоровья, если &gt;7 дней без записи',
     'ai-card-sh':'ai-карта','ai-card-lbl':'Снапшот для ИИ',
@@ -979,7 +1056,7 @@ const T = {
     'ai-card-name-ph':'Имя / ник','ai-card-city-ph':'Город',
     'ai-card-horizon-ph':'На сколько вперёд планируешь (напр: 1 год)',
     'ai-card-notes-ph':'Что ещё важно знать ИИ о тебе...',
-    'gdrive-connected':'🟢 Подключено','gdrive-disconnected':'🔴 Не подключено','gdrive-signin':'ВОЙТИ','gdrive-refresh':'ОБНОВИТЬ',
+    'gdrive-connected':'Подключено','gdrive-disconnected':'Не подключено','gdrive-signin':'Войти','gdrive-refresh':'Обновить',
     's-info-text':'<span style="color:var(--a);font-family:var(--mono)">localStorage</span> — данные в браузере на этом устройстве.<br>Не теряются при закрытии. Для переноса — экспорт JSON.',
     finEmpty:'записей нет — добавь доход или расход',finTplEmpty:'шаблон пуст',finPurchasesEmpty:'покупок нет',finDebtsEmpty:'задолженностей нет',
     income:'ДОХОД',expense:'РАСХОД',balance:'БАЛАНС',
@@ -989,7 +1066,7 @@ const T = {
     today_fg_lbl:'просто цели',today_dl_lbl:'цели с дедлайном',
     today_sec_today:'сегодня',today_sec_planned:'запланировано',today_sec_undone:'невыполненные',
     today_no_tasks:'нет задач — добавь во вкладке «неделя»',
-    today_no_planned:'нет запланированных задач',today_all_done:'всё выполнено 👍',
+    today_no_planned:'нет запланированных задач',today_all_done:'всё выполнено ✓',
     today_no_tpl:'нет задач для этого дня — добавь в рутина → дни нед.',
     routine_lbl:'рутина',
     rt_morning:'УТРО',rt_day:'ДЕНЬ',rt_evening:'ВЕЧЕР',rt_week:'НЕДЕЛЯ',
@@ -1022,9 +1099,9 @@ const T = {
     health_kcal:'Калории',health_kcal_unit:'ккал',health_prot:'Белок',health_fat:'Жиры',health_carb:'Углеводы',health_water_glasses:'стаканов',
     health_fiber:'Клетчатка',health_sugar:'Сахар',health_salt:'Соль',
     health_water:'Вода',health_sleep:'Сон',health_updated:'Нормы обновлены',
-        memo_bdays:'ДР',memo_hw:'ДЗ',memo_watchlist:'ВОТЧЛИСТ',
+        memo_bdays:'СВЯЗИ',memo_hw:'УЧЕБА',memo_watchlist:'ВОТЧЛИСТ',
     memo_notes:'ЗАМЕТКИ',
-    memo_bdays_full:'ДНИ РОЖДЕНИЯ',memo_add:'+ ДОБАВИТЬ',
+    memo_bdays_full:'СВЯЗИ',memo_add:'+ ДОБАВИТЬ',
     goals_deadline_lbl:'ЦЕЛИ С ДЕДЛАЙНОМ',goals_free_lbl:'ПРОСТО ЦЕЛИ',
     goals_no_date:'БЕЗ ДАТЫ',goals_text_photo:'ТЕКСТ И ФОТО',
     goals_name_ph:'Название цели...',goals_note_ph:'Заметка (необязательно)...',
@@ -1048,6 +1125,7 @@ const T = {
     's-data-lbl':'data','s-export-lbl':'Export JSON','s-export-sub':'Download all data','s-export-btn':'↓ JSON',
     's-import-lbl':'Import JSON','s-import-btn':'↑ JSON',
     's-reset-lbl':'reset','s-reset-btn':'RESET TODAY\'S TASKS','s-reset-all-btn':'RESET EVERYTHING',
+    's-reset-fin-settings-btn':'RESET FINANCE SETTINGS','s-reset-fin-history-btn':'RESET FINANCIAL HISTORY',
     's-autosave-lbl':'Autosave','s-autosave-sub':'To Google Drive every 2 minutes',
     's-gdrive-lbl':'google drive','s-gdrive-name':'Google Drive',
     's-gdrive-save-lbl':'Save to Drive','s-gdrive-save-sub':'Upload current backup',
@@ -1058,13 +1136,13 @@ const T = {
     's-notif-lbl':'notifications',
     'notif-lbl':'Notifications','notif-perm-granted':'Allowed by browser','notif-perm-denied':'Blocked in browser','notif-perm-ask':'Click to enable',
     'notif-off-btn':'OFF','notif-on-btn':'ENABLE',
-    'notif-deadlines':'⏰ Goal deadlines','notif-deadlines-sub':'30/15/7/3/1/0 days before due',
-    'notif-weekly':'📋 Week start','notif-weekly-sub':'Fri, Sat & Mon',
-    'notif-monthly':'📅 Month start','notif-monthly-sub':'3/1/0 days before end',
-    'notif-birthday':'🎂 Birthdays','notif-birthday-sub':'15/7/3/1/0 days before',
-    'notif-newyear':'🎄 New Year','notif-newyear-sub':'Dec 25 — Jan 5',
-    'notif-homework':'📚 Homework','notif-homework-sub':'3 days before due',
-    'notif-watchlist':'🎬 Watchlist','notif-watchlist-sub':'7 days before deadline',
+    'notif-deadlines':'Goal deadlines','notif-deadlines-sub':'30/15/7/3/1/0 days before due',
+    'notif-weekly':'Week start','notif-weekly-sub':'Fri, Sat & Mon',
+    'notif-monthly':'Month start','notif-monthly-sub':'3/1/0 days before end',
+    'notif-birthday':'Birthdays','notif-birthday-sub':'15/7/3/1/0 days before',
+    'notif-newyear':'New Year','notif-newyear-sub':'Dec 25 — Jan 5',
+    'notif-homework':'Homework','notif-homework-sub':'3 days before due',
+    'notif-watchlist':'Watchlist','notif-watchlist-sub':'7 days before deadline',
     'reminders-lbl':'Reminders','reminders-sub':'In-app, no browser permission',
     'reminder-weight':'⚖ Weigh-in','reminder-weight-sub':'On opening Health, if &gt;7 days without entry',
     'ai-card-sh':'ai card','ai-card-lbl':'AI Snapshot',
@@ -1074,7 +1152,7 @@ const T = {
     'ai-card-name-ph':'Name / nickname','ai-card-city-ph':'City',
     'ai-card-horizon-ph':'Planning horizon (e.g. 1 year)',
     'ai-card-notes-ph':'Anything else the AI should know about you...',
-    'gdrive-connected':'🟢 Connected','gdrive-disconnected':'🔴 Not connected','gdrive-signin':'SIGN IN','gdrive-refresh':'REFRESH',
+    'gdrive-connected':'Connected','gdrive-disconnected':'Not connected','gdrive-signin':'SIGN IN','gdrive-refresh':'REFRESH',
     's-info-text':'<span style="color:var(--a);font-family:var(--mono)">localStorage</span> — data stored in this browser.<br>Won\'t be lost on close. Use JSON export to transfer.',
     finEmpty:'no records — add income or expense',finTplEmpty:'template is empty',finPurchasesEmpty:'no purchases',finDebtsEmpty:'no debts',
     income:'INCOME',expense:'EXPENSE',balance:'BALANCE',
@@ -1084,7 +1162,7 @@ const T = {
     today_fg_lbl:'free goals',today_dl_lbl:'deadline goals',
     today_sec_today:'today',today_sec_planned:'planned',today_sec_undone:'overdue',
     today_no_tasks:'no tasks — add in the week tab',
-    today_no_planned:'no planned tasks',today_all_done:'all done 👍',
+    today_no_planned:'no planned tasks',today_all_done:'all done ✓',
     today_no_tpl:'no tasks for this day — add in routine → weekdays',
     routine_lbl:'routine',
     rt_morning:'MORNING',rt_day:'DAY',rt_evening:'EVENING',rt_week:'WEEK',
@@ -1117,9 +1195,9 @@ const T = {
     health_kcal:'Calories',health_kcal_unit:'kcal',health_prot:'Protein',health_fat:'Fats',health_carb:'Carbs',health_water_glasses:'glasses',
     health_fiber:'Fiber',health_sugar:'Sugar',health_salt:'Salt',
     health_water:'Water',health_sleep:'Sleep',health_updated:'Norms updated',
-        memo_bdays:'BD',memo_hw:'HW',memo_watchlist:'WATCHLIST',
+        memo_bdays:'LINKS',memo_hw:'STUDY',memo_watchlist:'WATCHLIST',
     memo_notes:'NOTES',
-    memo_bdays_full:'BIRTHDAYS',memo_add:'+ ADD',
+    memo_bdays_full:'LINKS',memo_add:'+ ADD',
     goals_deadline_lbl:'DEADLINE GOALS',goals_free_lbl:'FREE GOALS',
     goals_no_date:'NO DATE',goals_text_photo:'TEXT & PHOTO',
     goals_name_ph:'Goal name...',goals_note_ph:'Note (optional)...',
@@ -1207,7 +1285,7 @@ function applyLang(){
     'fin-purchases-lbl','fin-purchase-add-btn','fin-debts-lbl','fin-debt-owe-btn','fin-debt-owed-btn',
     's-pin-lbl','s-pin-change','s-pin-sub','s-pin-btn','s-appear-lbl','s-theme-lbl','s-theme-sub','s-lang-lbl',
     's-data-lbl','s-export-lbl','s-export-sub','s-export-btn','s-import-lbl','s-import-btn',
-    's-reset-lbl','s-reset-btn','s-reset-all-btn',
+    's-reset-lbl','s-reset-btn','s-reset-all-btn','s-reset-fin-settings-btn','s-reset-fin-history-btn',
     's-autosave-lbl','s-autosave-sub',
     's-gdrive-lbl','s-gdrive-name',
     's-gdrive-save-lbl','s-gdrive-save-sub','s-gdrive-load-lbl','s-gdrive-load-sub',
@@ -1221,8 +1299,13 @@ function applyLang(){
     const val=lang[id];if(!val)return;
     // for .sh elements that have child buttons, only update text node
     if(el.classList&&(el.classList.contains('sh')||el.classList.contains('sh-btn')||el.classList.contains('slabel')||el.classList.contains('ssub')||el.classList.contains('add-btn'))){
-      // replace first text node
-      for(let n of el.childNodes){if(n.nodeType===3){n.textContent=val;return;}}
+      // fin-hdr headers keep the label inside a <span class="hdr-text"> — update that span,
+      // otherwise the first text node (whitespace between children) gets overwritten and
+      // the label is duplicated next to the original one.
+      const ht=el.querySelector(':scope > .hdr-text');
+      if(ht){ht.textContent=val;return;}
+      // replace first non-whitespace text node (skip pure whitespace between elements)
+      for(let n of el.childNodes){if(n.nodeType===3&&n.textContent.trim()){n.textContent=val;return;}}
       el.innerHTML=val;
     } else {el.innerHTML=val;}
   });
@@ -1287,4 +1370,3 @@ function applyLang(){
   const _happly=document.getElementById('health-apply-btn');if(_happly)_happly.textContent=(typeof t==='function'?t('health_apply'):'ПРИМЕНИТЬ НОРМЫ');
 }
 (function(){applyLang();setLang(appLang);})();
-

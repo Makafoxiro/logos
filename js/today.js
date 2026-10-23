@@ -20,32 +20,36 @@ function findNavBtn(pageKey){
 
 // ── Переход на конкретный слайд рутины с подсветкой пункта ─
 // slotKey: 'morning'/'day'/'evening'=0 (ежедневное), 'week'=1, 'month'=2, '_annuals'=3
-// realIdx для ежедневного пункта = индекс в routine.daily; id в слайде: rt-item-<slot>-<dow>-<realIdx>
+// realIdx для ежедневного пункта = индекс в routine.daily; id в слайде: rt-item-<slot>-<realIdx>
 const _rtSlideIndex = {morning:0, day:0, evening:0, week:1, month:2, '_annuals':3};
 function navToRoutineSlide(slotKey, realIdx){
   const slideIdx = _rtSlideIndex[slotKey] !== undefined ? _rtSlideIndex[slotKey] : 0;
+  const isDaily = ['morning','day','evening'].includes(slotKey);
+  const validIdx = realIdx !== undefined && realIdx !== null && realIdx >= 0;
+  // Ежедневные группы (УТРО/ДЕНЬ/ВЕЧЕР) по умолчанию свёрнуты — разворачиваем целевую,
+  // иначе пункт не отрисуется в DOM и подсветка/скролл не найдут элемент.
+  // Разворачиваем только при валидном индексе (без него подсветки не будет).
+  if(validIdx && isDaily && typeof _dailyCollapsed!=='undefined' && _dailyCollapsed[slotKey]){
+    _dailyCollapsed[slotKey] = false;
+  }
   // Сначала переключаем слайд
   if(typeof goRtSlide === 'function') goRtSlide(slideIdx);
-  // Затем открываем страницу рутины
+  // Затем открываем страницу рутины (renderRoutine отрисует развёрнутую группу)
   const btn = findNavBtn('routine');
   goPage('routine', btn);
-  // Подсвечиваем конкретный пункт если передан индекс
-  if(realIdx === undefined || realIdx === null) return;
-  setTimeout(()=>{
-    // Для ежедневных слотов id содержит день недели сегодня + realIdx
-    let el=null;
-    if(['morning','day','evening'].includes(slotKey)){
-      const dow=(new Date().getDay()+6)%7;
-      el=document.getElementById('rt-item-' + slotKey + '-' + dow + '-' + realIdx);
-    }else{
-      el=document.getElementById('rt-item-' + slotKey + '-' + realIdx);
-    }
+  if(!validIdx) return;
+  // Повторные попытки: рендер синхронный, но даём кадры на layout
+  let tries = 8;
+  (function findAndHighlight(){
+    const el = document.getElementById('rt-item-' + slotKey + '-' + realIdx);
     if(el){
       el.scrollIntoView({behavior:'smooth', block:'center'});
       el.classList.add('today-highlight-anim');
       setTimeout(()=>el.classList.remove('today-highlight-anim'), 1600);
+    } else if(tries-- > 0){
+      setTimeout(findAndHighlight, 60);
     }
-  }, 300);
+  })();
 }
 
 // ── Универсальный переход + подсветка элемента ──────────
@@ -137,6 +141,7 @@ function renderTodayPage(){
   if(heroDate) heroDate.textContent = displayDate(now,{noYear:true});
   if(heroDay)  heroDay.textContent  = dayFullName(now);
   renderTodayNotifs(now);
+  renderTodaySchedule(now);
   renderTodayHW(now);
   renderTodayTasks(now);
   
@@ -169,7 +174,7 @@ function renderTodayNotifs(now){
         onmouseleave="this.style.background=''"
         style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;border-radius:6px;transition:background .15s,transform .12s,opacity .12s">
         <div style="width:7px;height:7px;border-radius:50%;background:${n.color};flex-shrink:0;box-shadow:0 0 5px ${n.color}88"></div>
-        <div style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.icon||''} ${n.name}</div>
+        <div style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.icon?uiIconSvg(n.icon):''} ${n.name}</div>
         <div style="font-family:var(--mono);font-size:10px;color:${n.color};font-weight:600;flex-shrink:0;white-space:nowrap">${n.label||''}</div>
       </div>`;
     }).join('');
@@ -227,19 +232,55 @@ function findNotifElement(notifId, dest){
 
 
 
+// ── РАСПИСАНИЕ ПАР НА СЕГОДНЯ (из вкладки «УЧЕБА») ────────
+function _pluralPairs(n){
+  const a=Math.abs(n)%100, b=a%10;
+  if(a>10&&a<20)return 'пар';
+  if(b>1&&b<5)return 'пары';
+  if(b===1)return 'пара';
+  return 'пар';
+}
+function renderTodaySchedule(now){
+  const block=document.getElementById('today-sched-block');
+  const list=document.getElementById('today-sched-list');
+  const cnt=document.getElementById('today-sched-count');
+  if(!block||!list) return;
+  if(typeof eduSchedule==='undefined'||!eduSchedule.length){ block.style.display='none'; return; }
+  const parity=(typeof eduCurrentParity==='function')?eduCurrentParity():'num';
+  const visPairs=eduSchedule.filter(p=>!p.parity||p.parity==='both'||p.parity===parity);
+  const tIdx=(now.getDay()+6)%7;
+  const dayPairs=visPairs.filter(p=>+p.day===tIdx).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
+  if(!dayPairs.length){ block.style.display='none'; return; }
+  block.style.display='block';
+  if(cnt) cnt.textContent=dayPairs.length+' '+_pluralPairs(dayPairs.length);
+  list.innerHTML=dayPairs.map(p=>eduPairRow(p)).join('');
+  if(_todayGoalCollapsed['today-sched-collapsed']===undefined)_todayGoalCollapsed['today-sched-collapsed']=false;
+  _applyGoalCollapse('today-sched-collapsed','today-sched-list','today-sched-chevron');
+}
+
 // ── ДЗ ──────────────────────────────────────────────────
 function renderTodayHW(now){
   const block=document.getElementById('today-hw-block');
   const list=document.getElementById('today-hw-list');
+  const cnt=document.getElementById('today-hw-count');
   if(!block||!list) return;
-  const skipValues=['ничего','Ничего','-'];
-  const hw=(typeof homework!=='undefined'?homework:[]).filter(h=>!h.done&&!skipValues.includes(h.task));
+  // Не показываем: сделанное, пустое, «ничего»/«-»
+  const skipValues=['ничего','Ничего','-','–'];
+  const hw=(typeof homework!=='undefined'?homework:[]).filter(h=>{
+    if(h.done) return false;
+    const t=String(h.task||'').trim();
+    if(!t) return false;                    // пара ещё без задания
+    if(skipValues.includes(t)) return false; // «ничего», «-»
+    return true;
+  });
   if(!hw.length){ block.style.display='none'; return; }
   block.style.display='block';
+  if(cnt) cnt.textContent='('+hw.length+')';
+  // innerHTML ДО _applyGoalCollapse: иначе раскрытие измеряет высоту пустого/старого списка
   list.innerHTML=hw.map(h=>`
     <div class="today-item" id="today-hw-${h.id}" style="cursor:pointer" onclick="toggleTodayHWDone(${h.id},this)">
       <div class="chk" style="flex-shrink:0"></div>
-      <div style="font-size:15px">📚</div>
+      ${uiIconSvg('book')}
       <div style="flex:1;min-width:0">
         <div style="font-size:14px">${h.subj||''}</div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:2px">${h.task||''}</div>
@@ -247,6 +288,9 @@ function renderTodayHW(now){
       </div>
       ${arrowBtn('memo','hw-item-'+h.id,'homework')}
     </div>`).join('');
+  // По умолчанию развёрнуто — как в «УЧЕБА»-версии; свернуть можно тапом
+  if(_todayGoalCollapsed['today-hw-collapsed']===undefined) _todayGoalCollapsed['today-hw-collapsed']=false;
+  _applyGoalCollapse('today-hw-collapsed','today-hw-list','today-hw-chevron');
 }
 
 function toggleTodayHWDone(hId, el){
@@ -257,7 +301,7 @@ function toggleTodayHWDone(hId, el){
   const chk=el.querySelector('.chk'); if(chk) chk.textContent='✓';
   setTimeout(()=>{
     todayFadeOut(el, ()=>{
-      h.task='-';
+      h.done=true; // помечаем сделанным, не затирая текст задания
       if(typeof LS!=='undefined') LS.s('homework',homework);
       renderTodayHW(new Date());
       if(typeof curPage!=='undefined'&&curPage==='memo'&&typeof renderMemoBody==='function') renderMemoBody();
@@ -318,7 +362,7 @@ function renderTodayTplList(){
 
   if(skillsItems.length > 0){
     const totalEx = skillsItems.reduce((s,t)=>s+(t.exercises||[]).length,0);
-    const doneEx = skillsItems.reduce((s,t)=>s+(t.exercises||[]).filter((_,ei)=>!!(typeof tplDone!=='undefined'&&tplDone[key+'__sport__'+t.id+'__'+ei])).length,0);
+    const doneEx = skillsItems.reduce((s,t)=>s+(t.exercises||[]).filter((_,ei)=>!!(typeof tplDone!=='undefined'&&tplDone[skillTplDoneKey(key,t,ei)])).length,0);
     html += tplSectionHeader('навыки', 'skills', _tplSections.skills, totalEx - doneEx);
     if(_tplSections.skills){
       html += `<div style="display:flex;flex-direction:column;gap:0;padding:4px 12px 8px;border-bottom:1px solid var(--bd)">`;
@@ -327,7 +371,7 @@ function renderTodayTplList(){
         const collapseKey = '_todayTplCollapse_' + tpl.id;
         const isOpen = !!window._todayTplCollapseState[collapseKey]; // default: closed
         const isMental = tpl.skillType === 'mental';
-        const icon = isMental ? '🧠' : '💪';
+        const icon = uiIconSvg(isMental?'brain':'dumbbell');
         const isNumbered = (tpl.exercises||[]).length && /^\d+[.)]/.test(tpl.exercises[0]);
         html += `<div style="margin-bottom:4px">
           <div onclick="event.stopPropagation();(function(){
@@ -343,7 +387,7 @@ function renderTodayTplList(){
           if(isNumbered){
             // нумерованный — каждый элемент в отдельную строку
             (tpl.exercises || []).forEach((ex, ei) => {
-              const sKey = key + '__sport__' + tpl.id + '__' + ei;
+              const sKey = skillTplDoneKey(key,tpl,ei);
               const isDone = !!(typeof tplDone !== 'undefined' && tplDone[sKey]);
               html += `<div class="today-item ${isDone?'done':''}" onclick="toggleTodayTplItem('${sKey}',this)" style="padding-left:16px">
                 <div class="chk">${isDone?'✓':''}</div>
@@ -353,7 +397,7 @@ function renderTodayTplList(){
           } else {
             // через запятую — каждое упражнение тоже с чекбоксом, но без номера
             (tpl.exercises || []).forEach((ex, ei) => {
-              const sKey = key + '__sport__' + tpl.id + '__' + ei;
+              const sKey = skillTplDoneKey(key,tpl,ei);
               const isDone = !!(typeof tplDone !== 'undefined' && tplDone[sKey]);
               html += `<div class="today-item ${isDone?'done':''}" onclick="toggleTodayTplItem('${sKey}',this)" style="padding-left:16px">
                 <div class="chk">${isDone?'✓':''}</div>
@@ -375,7 +419,7 @@ function renderTodayTplList(){
       activeHabits.forEach(h => {
         html += `<div class="today-item" onclick="event.stopPropagation()">
           <div class="chk" style="color:var(--t3);font-size:11px">—</div>
-          <div class="item-name" style="flex:1;min-width:0;color:var(--t2)">${h.emoji?h.emoji+' ':''}${h.name}</div>
+          <div class="item-name" style="flex:1;min-width:0;color:var(--t2)">${habitIconSvg(h.icon,'habit-inline-icon')}${h.name}</div>
           <button onclick="event.stopPropagation();navToWeekTplItem('dc-tpl-hab-${h.id}')" style="${arrowStyle}" ${arrowHover}>→</button>
         </div>`;
       });
@@ -394,7 +438,7 @@ function toggleTodayTplItem(tplKey, el){
   if(el){
     const isDone = !!(tplDone[tplKey]);
     const chk = el.querySelector('.chk');
-    if(isDone){ el.classList.add('done'); if(chk) chk.textContent='✓'; }
+    if(isDone){ el.classList.add('done'); if(chk){ chk.textContent='✓'; chk.classList.remove('chk-pop'); void chk.offsetWidth; chk.classList.add('chk-pop'); } }
     else { el.classList.remove('done'); if(chk) chk.textContent=''; }
     el.classList.add('today-highlight-anim');
     setTimeout(()=>el.classList.remove('today-highlight-anim'), 600);
@@ -444,7 +488,7 @@ function renderTodayTasks(now){
     ? templatesForDate(todayKey) : [];
   const _skillsCount = _skillsTplItems.reduce((s, t) => s + (t.exercises||[]).length, 0);
   const _skillsDoneCount = _skillsTplItems.reduce((s, t) =>
-    s + (t.exercises||[]).filter((_, ei) => !!(typeof tplDone !== 'undefined' && tplDone[todayKey+'__sport__'+t.id+'__'+ei])).length, 0);
+    s + (t.exercises||[]).filter((_, ei) => !!(typeof tplDone !== 'undefined' && tplDone[skillTplDoneKey(todayKey,t,ei)])).length, 0);
 
   const totalToday = realTodayTasks.length + _rtItems.length + _skillsCount;
   const doneToday  = realTodayTasks.filter(t => t.done).length + _rtDoneCount + _skillsDoneCount;
@@ -453,6 +497,14 @@ function renderTodayTasks(now){
   if(ring) ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
   if(ringTxt) ringTxt.textContent = pct + '%';
   if(countEl) countEl.textContent = doneToday + '/' + totalToday;
+  if(ring){
+    if(ring._lastPct !== pct){
+      ring.classList.remove('ring-bounce');
+      void ring.offsetWidth;
+      ring.classList.add('ring-bounce');
+    }
+    ring._lastPct = pct;
+  }
 
   // Будущие дни (offset > 0) с задачами
   const plannedDays = allKeys.filter(({offset, key}) => {
@@ -502,7 +554,7 @@ function renderTodayTasks(now){
       html += permTasks.map(t => `
         <div class="today-item perm-task ${t.done?'done':''}" id="today-perm-${t.id}" onclick="wcTogglePermanent('${t.id}')">
           <div class="chk">${t.done?'✓':''}</div>
-          <div style="font-size:15px">📌</div>
+          ${uiIconSvg('pin')}
           <div class="item-name" style="flex:1;min-width:0">${t.name}</div>
           <button onclick="event.stopPropagation();wcDelPermanent('${t.id}')" title="Удалить" style="flex-shrink:0;width:30px;height:30px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--t3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseleave="this.style.color='var(--t3)';this.style.borderColor='var(--bd)'">✕</button>
         </div>`).join('');
@@ -545,7 +597,7 @@ function renderTodayTasks(now){
   if(_taskSections.undone){
     html += `<div style="${INNER};display:flex;flex-direction:column;gap:6px;padding-top:8px;padding-bottom:8px">`;
     if(!undoneDays.length){
-      html += `<div style="${INNER_EMPTY}">всё выполнено 👍</div>`;
+      html += `<div style="${INNER_EMPTY}">всё выполнено ✓</div>`;
     } else {
       undoneDays.forEach(({key, date}) => {
         const dayTasks = ((typeof tasks!=='undefined'&&tasks[key])?tasks[key]:[]).filter(t=>!t.done);
@@ -618,21 +670,19 @@ const _todayGoalCollapsed = {};
 function toggleTodayGoalBlock(key, listId, headerEl) {
   _todayGoalCollapsed[key] = !_todayGoalCollapsed[key];
   const list = document.getElementById(listId);
-  const chevronId = headerEl ? headerEl.querySelector('span[id$="-chevron"]') : null;
-  if (list) {
-    if (_todayGoalCollapsed[key]) {
-      list.style.display = 'none';
-    } else {
-      list.style.display = 'flex';
-    }
-  }
-  if (chevronId) chevronId.style.transform = _todayGoalCollapsed[key] ? '' : 'rotate(90deg)';
+  const chevEl = headerEl ? headerEl.querySelector('span[id$="-chevron"]') : null;
+  // Гасим висящие таймеры прошлой анимации — иначе на телефоне отложенный
+  // display:none скрывает только что развёрнутый блок (быстрые тапы)
+  if (list && list._colT) { clearTimeout(list._colT); list._colT = null; }
+  // Делегируем в _applyGoalCollapse: он единообразно сбрасывает max-height/opacity,
+  // оставшиеся от сворачивания (иначе список остаётся с нулевой высотой и прозрачный)
+  _applyGoalCollapse(key, listId, chevEl ? chevEl.id : null);
 }
 function _applyGoalCollapse(key, listId, chevronElId) {
   const collapsed = _todayGoalCollapsed[key] !== false; // default true = collapsed
   const list = document.getElementById(listId);
   const chev = document.getElementById(chevronElId);
-  if (list) list.style.display = collapsed ? 'none' : 'flex';
+  animateCollapse(list,collapsed,'flex');
   if (chev) chev.style.transform = collapsed ? '' : 'rotate(90deg)';
 }
 
@@ -648,16 +698,17 @@ function renderTodayFreeGoals(){
   if(!active.length){ block.style.display='none'; return; }
   block.style.display='block';
   if(_todayGoalCollapsed['today-fg-collapsed']===undefined) _todayGoalCollapsed['today-fg-collapsed']=true;
-  _applyGoalCollapse('today-fg-collapsed','today-freegoals-list','today-fg-chevron');
   const fgCountEl=document.getElementById('today-fg-count');
   if(fgCountEl) fgCountEl.textContent='('+active.length+')';
+  // innerHTML до _applyGoalCollapse — чтобы раскрытие измеряло актуальную высоту
   list.innerHTML=active.map(g=>`
     <div class="today-item" id="today-fg-${g.id}" onclick="toggleTodayFreeGoal(${g.id},this)" style="cursor:pointer">
       <div class="chk"></div>
-      ${g.photo?`<img src="${g.photo}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0">`:'<div style="font-size:18px">🎯</div>'}
+      ${g.photo?`<img src="${g.photo}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0">`:uiIconSvg('target')}
       <div class="item-name">${g.text||''}</div>
       ${arrowBtn('goals','free-goal-item-'+g.id)}
     </div>`).join('');
+  _applyGoalCollapse('today-fg-collapsed','today-freegoals-list','today-fg-chevron');
 }
 
 function toggleTodayFreeGoal(id, el){
@@ -693,16 +744,16 @@ function renderTodayDeadlineGoals(){
   if(!active.length){ block.style.display='none'; return; }
   block.style.display='block';
   if(_todayGoalCollapsed['today-dl-collapsed']===undefined) _todayGoalCollapsed['today-dl-collapsed']=true;
-  _applyGoalCollapse('today-dl-collapsed','today-deadline-goals-list','today-dl-chevron');
   const dlCountEl=document.getElementById('today-dl-count');
   if(dlCountEl) dlCountEl.textContent='('+active.length+')';
+  // innerHTML до _applyGoalCollapse — чтобы раскрытие измеряло актуальную высоту
   list.innerHTML=active.map(g=>{
     const days=typeof daysToDeadline==='function'?daysToDeadline(g.deadline,now):null;
     const dlColor=days<0?'var(--red)':days===0?'var(--red)':days<=7?'var(--amber)':'var(--a)';
     const dlLabel=days===null?'':days===0?'сегодня!':days<0?`просрочено ${Math.abs(days)}д.`:`${days}д.`;
     return `<div class="today-item" id="today-dlgoal-${g.id}" onclick="toggleTodayDeadlineGoal(${g.id},this)" style="cursor:pointer">
       <div class="chk" style="flex-shrink:0"></div>
-      <div style="font-size:16px">🎯</div>
+      ${uiIconSvg('target')}
       <div style="flex:1;min-width:0">
         <div class="item-name" style="font-size:14px;font-weight:500;overflow:visible;white-space:normal">${g.name}</div>
         ${g.note?`<div class="item-note" style="font-size:12px;color:var(--t2);margin-top:1px">${g.note}</div>`:''}
@@ -711,6 +762,7 @@ function renderTodayDeadlineGoals(){
       ${arrowBtn('goals','goal-item-'+g.id)}
     </div>`;
   }).join('');
+  _applyGoalCollapse('today-dl-collapsed','today-deadline-goals-list','today-dl-chevron');
 }
 
 function toggleTodayDeadlineGoal(id, el){
@@ -774,10 +826,12 @@ function toggleTodayRoutine(key, slot, realIdx, el){
   if(el){
     const chk=el.querySelector('.rt-chk');
     if(nowDone){
-      el.classList.add('done'); if(chk) chk.textContent='✓';
+      el.classList.add('done'); if(chk){ chk.textContent='✓'; chk.classList.remove('chk-pop'); void chk.offsetWidth; chk.classList.add('chk-pop'); }
     } else { el.classList.remove('done'); if(chk) chk.textContent=''; }
   }
   if(typeof curPage!=='undefined'&&curPage==='routine'&&typeof renderRoutine==='function') renderRoutine();
+  // Пересчитать счетчик задач на странице Сегодня (выполненная рутина влияет на процент)
+  if(typeof renderTodayTasks==='function') renderTodayTasks(new Date());
 }
 
 // ── РУТИНА НЕДЕЛИ/МЕСЯЦА/ГОДА ────────────────────────────
@@ -834,7 +888,7 @@ function toggleTodayWeekMonthYear(block, idx, el){
   if(el){
     const chk=el.querySelector('.rt-chk');
     if(nowDone){
-      el.classList.add('done'); if(chk) chk.textContent='✓';
+      el.classList.add('done'); if(chk){ chk.textContent='✓'; chk.classList.remove('chk-pop'); void chk.offsetWidth; chk.classList.add('chk-pop'); }
     } else { el.classList.remove('done'); if(chk) chk.textContent=''; }
   }
   if(typeof curPage!=='undefined'&&curPage==='routine'&&typeof renderRoutine==='function') renderRoutine();

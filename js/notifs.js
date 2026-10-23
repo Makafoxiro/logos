@@ -58,7 +58,7 @@ function scheduleAllNotifs(){
         const d=parseLocalDate(g.deadline);if(!d)return;
         const days=Math.round((d-now)/86400000);
         if(!checkDays.includes(days))return;
-        const lbl=days===0?'🔴 Дедлайн сегодня!':days===1?'⏰ Дедлайн завтра':days===3?'⏰ Через 3 дня дедлайн':days===7?'⏰ Через неделю дедлайн':days===15?'⏰ Через 15 дней дедлайн':'⏰ Через 30 дней дедлайн';
+        const lbl=days===0?'Дедлайн сегодня!':days===1?'Дедлайн завтра':days===3?'Через 3 дня дедлайн':days===7?'Через неделю дедлайн':days===15?'Через 15 дней дедлайн':'Через 30 дней дедлайн';
         sendNotif(lbl,g.name,'dl-'+g.id+'-d'+days);
       });
     };
@@ -86,7 +86,7 @@ function scheduleAllNotifs(){
       });
       if(!nearestTarget)return;
       const t=setTimeout(()=>{
-        sendNotif('📋 Начало недели',`Запланируй задачи на неделю в ЛОГОС`,'weekly');
+        sendNotif('Начало недели',`Запланируй задачи на неделю в ЛОГОС`,'weekly');
         schedWeekly();
       },minMs);
       _notifTimers.push(t);
@@ -109,7 +109,7 @@ function scheduleAllNotifs(){
         if(target>now){
           const ms=target-now;
           const t=setTimeout(()=>{
-            const lbl=daysLeft===0?'📅 Конец месяца сегодня!':daysLeft===1?'📅 Завтра конец месяца':'📅 Через 3 дня конец месяца';
+            const lbl=daysLeft===0?'Конец месяца сегодня!':daysLeft===1?'Завтра конец месяца':'Через 3 дня конец месяца';
             const body='Подведи итоги месяца!';
             sendNotif(lbl,body,'monthly-'+daysLeft);
             // Перепланировать на следующий день
@@ -144,7 +144,7 @@ function scheduleAllNotifs(){
         if(target<=now)target.setDate(target.getDate()+1);
         const ms=target-now;
         const t2=setTimeout(()=>{
-          const lbl=days===0?'🎂 Сегодня ДР!':days===1?'🎂 Завтра ДР!':days===3?'🎂 Через 3 дня ДР':days===7?'🎂 Через неделю ДР':'🎂 Через 15 дней ДР';
+          const lbl=days===0?'Сегодня ДР!':days===1?'Завтра ДР!':days===3?'Через 3 дня ДР':days===7?'Через неделю ДР':'Через 15 дней ДР';
           sendNotif(lbl,b.name,'bd-'+b.id+'-'+days);
         },ms);
         _notifTimers.push(t2);
@@ -164,7 +164,7 @@ function scheduleAllNotifs(){
         if(!h.date)return;
         const days=daysToDeadline(h.date,now);
         if(days===null||days<0||days>3)return;
-        const lbl=days===0?'📚 Сдать сегодня!':days===1?'📚 Сдать завтра!':'📚 ДЗ через '+days+'д.';
+        const lbl=days===0?'Сдать сегодня!':days===1?'Сдать завтра!':'ДЗ через '+days+'д.';
         sendNotif(lbl,h.subj+': '+h.task.slice(0,40),'hw-'+h.id+'-'+days);
       });
     };
@@ -181,7 +181,7 @@ function scheduleAllNotifs(){
         if(!w.date||w.status==='done')return;
         const days=daysToDeadline(w.date,now);
         if(days===null||days<0||days>7)return;
-        const lbl=days===0?'🎬 Дедлайн сегодня!':days===1?'🎬 Дедлайн завтра!':'🎬 Дедлайн через '+days+'д.';
+        const lbl=days===0?'Дедлайн сегодня!':days===1?'Дедлайн завтра!':'Дедлайн через '+days+'д.';
         sendNotif(lbl,w.name,'watch-'+w.id+'-'+days);
       });
     };
@@ -209,8 +209,8 @@ function scheduleAllNotifs(){
       // Внутри периода — уведомить сейчас
       const isJan=mo===0;
       const daysLeft=isJan?(5-d):null;
-      const msg=mo===11&&d===31?'🎆 Завтра Новый год! Готовься!':mo===0&&d===1?'🎉 С Новым годом! Поставь цели!':isJan?`🎄 Ещё ${daysLeft} дней праздников — наслаждайся!`:'🎄 Новый год скоро! Подведи итоги года.';
-      sendNotif('🎄 Новый год',msg,'newyear-'+now.getFullYear()+'-'+mo+'-'+d);
+      const msg=mo===11&&d===31?'Завтра Новый год! Готовься!':mo===0&&d===1?'С Новым годом! Поставь цели!':isJan?`Ещё ${daysLeft} дней праздников — наслаждайся!`:'Новый год скоро! Подведи итоги года.';
+      sendNotif('Новый год',msg,'newyear-'+now.getFullYear()+'-'+mo+'-'+d);
       // Следующее — через 24ч
       const t=setTimeout(schedNY,24*3600*1000);
       _notifTimers.push(t);
@@ -317,4 +317,3 @@ function checkWeightReminder(){
     flash('⚖ Не забудь внести вес — прошло '+diffDays+' дней');
   }
 }
-

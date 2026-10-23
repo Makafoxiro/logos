@@ -123,12 +123,34 @@ let birthdays = LS.g('birthdays', []);
 let homework  = LS.g('homework',[]);
 let notes     = LS.g('notes',[]);
 let watchlist  = LS.g('watchlist', []);
+// ── УЧЕБА (вкладка мемо) ─────────────────────────────────
+let eduSchedule  = LS.g('eduSchedule', []);   // {id, day:0..6, time, name, teacher, corpus, room, parity:'both'|'num'|'den'}
+let eduSubjects  = LS.g('eduSubjects', []);   // {id, name, teacher}
+let eduLinks     = LS.g('eduLinks', []);      // {id, title, url}
+// (сайт замен eduSubsUrl удалён)
+let eduWeekParity= LS.g('eduWeekParity', 'num');  // 'num'(числитель)|'den'(знаменатель) — паритет «якорной» недели
+let eduWeekAnchor = LS.g('eduWeekAnchor', '');    // понедельник якорной недели 'YYYY-MM-DD'
+// понедельник недели, содержащей дата d (ключ 'YYYY-MM-DD')
+function eduMondayKey(d){
+  const x=new Date(d||Date.now());
+  x.setDate(x.getDate()-((x.getDay()+6)%7));
+  return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+}
+// миграция со старого режима «авто» / первый запуск: якорем становится текущая
+// неделя; дальше паритет чередуется автоматически от этой точки
+if(eduWeekParity!=='num'&&eduWeekParity!=='den')eduWeekParity='num';
+if(!eduWeekAnchor){eduWeekAnchor=eduMondayKey(new Date());LS.s('eduWeekParity',eduWeekParity);LS.s('eduWeekAnchor',eduWeekAnchor);}
+let eduBells     = LS.g('eduBells', []);      // расписание звонков: {id, day:0..6, time, name}
+if(!Array.isArray(eduSchedule))eduSchedule=[];
+if(!Array.isArray(eduSubjects))eduSubjects=[];
+if(!Array.isArray(eduLinks))eduLinks=[];
+if(!Array.isArray(eduBells))eduBells=[];
 let notifyOn  = LS.g('notifyOn',false);
 let autoSaveOn = LS.g('autoSaveOn', false);
 let _autoSaveTimer = null;
 let mTime     = LS.g('morningTime','08:00');
 let eTime     = LS.g('eveningTime','21:00');
-let selEmoji  = '';
+let selHabitIcon = 'sparkles';
 let nid       = LS.g('nid',971);
 let skillTemplates = LS.g('sportTemplates', []);
 // Миграция сломанного формата: если exercises пустой но есть exercisesHeavy/Light/None
@@ -159,9 +181,21 @@ let skillTemplates = LS.g('sportTemplates', []);
 let physParams   = LS.g('physParams',   []); // Параметры ФИЗИЧЕСКИХ тренировок {id, name, notes}
 let mentalParams = LS.g('mentalParams', []); // Параметры УМСТВЕННЫХ тренировок {id, name, notes}
 let finLog      = LS.g('finLog',{});       // {date: [{id,type,amount,desc}]}
-let finTpl      = LS.g('finTpl',{week:{income:[],expense:[]},month:{income:[],expense:[]},month3:{income:[],expense:[]},year:{income:[],expense:[]}});
+let finTpl      = LS.g('finTpl',{week:{income:[],expense:[]},month:{income:[],expense:[]},month3:{income:[],expense:[]},halfYear:{income:[],expense:[]},year:{income:[],expense:[]}});
 if(!finTpl.month3)finTpl.month3={income:[],expense:[]};
-let finPurchases= LS.g('finPurchases',[]);  // [{id,name,price,date}]
+if(!finTpl.halfYear)finTpl.halfYear={income:[],expense:[]};
+// ── ДЕНЕЖНАЯ РЕФОРМА ──
+// finPlans: снимки плана по месяцам {'YYYY-MM':{income:[],expense:[]}} —
+// создаются автоматически копией finTpl.month; закрытые месяцы сохраняются навсегда.
+let finPlans     = LS.g('finPlans',{});      // {'2026-10':{income:[{id,name,amount,paid}],expense:[...]}}
+// Стартовый капитал (задаётся в настройках блока денег) — база для счёта «капитал».
+let finCapital0  = LS.g('finCapital0',0);
+let finAssets    = LS.g('finAssets',[]); // [{id,name,category,value,rate,period,lastPeriodIndex}]
+let finAssetHistory = LS.g('finAssetHistory',[]); // periodic non-cash asset revaluations
+// Круговая: сумма-база в центре (месячный доход по плану/вручную) и режим показа '%'|'rub'.
+let finPieSum    = LS.g('finPieSum',0);
+let finPieMode   = LS.g('finPieMode','%');   // '%' | 'rub'
+let finPurchases= LS.g('finPurchases',[]);  // [{id,name,price,date,paid,paidAt,archived}]
 let finDebts    = LS.g('finDebts',[]);      // [{id,direction:'owe'|'owed',name,amount,desc,date,paid}]
 let curPage   = 'today';
 let calVD     = new Date();

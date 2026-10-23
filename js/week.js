@@ -78,7 +78,7 @@ function updateWNav(){
 
 // track which cards show template view
 const cardTplView={};
-// 📌 режим добавления: key дня → true если следующая задача будет постоянной
+// Режим добавления: key дня → true, если следующая задача будет постоянной
 let _wcPermMode={};
 
 function paintCard(card,d){
@@ -89,7 +89,7 @@ function paintCard(card,d){
   const _skillsTplItems=(typeof templatesForDate==='function')?templatesForDate(dk(d)):[];
   const _skillsCount=_skillsTplItems.reduce((s,t)=>s+t.exercises.length,0);
   const _tplKey2=dk(d);
-  const _skillsDoneCount=_skillsTplItems.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[_tplKey2+'__sport__'+t.id+'__'+ei]).length,0);
+  const _skillsDoneCount=_skillsTplItems.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[skillTplDoneKey(_tplKey2,t,ei)]).length,0);
   const done=realArr.filter(x=>x.done).length+_skillsDoneCount,total=realArr.length+_skillsCount,p=pct(done,total);
   const circ=107.0,off=circ-(p/100)*circ;
   const dow=(d.getDay()+6)%7;
@@ -137,9 +137,9 @@ function paintCard(card,d){
     '<div class="dc-footer" style="display:flex;align-items:stretch;gap:'+(isMob?'6':'3')+'px;'+(isMob?'padding:8px 12px 10px':'')+'">'+
       '<input class="dc-inp" id="taskinp-'+key+'" placeholder="'+(_wcPermMode[key]?'постоянная задача…':'задача...')+'" maxlength="300" style="flex:1;'+_hide+'">'+
       '<div class="dc-btns-col">'+
-        '<div class="dc-perm-btn'+(_wcPermMode[key]?' on':'')+'" id="permbtn-'+key+'" title="Постоянная задача (плавает на неделю)" style="'+_hide+'">📌</div>'+
+        '<div class="dc-perm-btn'+(_wcPermMode[key]?' on':'')+'" id="permbtn-'+key+'" title="Постоянная задача (плавает на неделю)" style="'+_hide+'">'+uiIconSvg('pin')+'</div>'+
         '<div class="dc-abtn" id="taskabtn-'+key+'" style="'+_hide+'">+</div>'+
-        '<div class="dc-tpl-btn'+(showTpl?' on':'')+'" id="tplbtn-'+key+'">📋</div>'+
+        '<div class="dc-tpl-btn'+(showTpl?' on':'')+'" id="tplbtn-'+key+'">'+uiIconSvg('clipboard')+'</div>'+
       '</div>'+
     '</div>';
 
@@ -155,7 +155,7 @@ function paintCard(card,d){
   if(inp) inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();wcAddTask(card,key);}});
   if(abtn) abtn.addEventListener('click',()=>wcAddTask(card,key));
 
-  // 📌 переключатель режима: постоянная задача vs обычное дело дня
+  // Переключатель режима: постоянная задача или обычное дело дня
   if(permbtn) permbtn.addEventListener('click',()=>{
     _wcPermMode[key]=!_wcPermMode[key];
     const on=!!_wcPermMode[key];
@@ -228,7 +228,7 @@ function paintCard(card,d){
         });
 
         tpl.exercises.forEach((ex,ei)=>{
-          const sKey=key+'__sport__'+tpl.id+'__'+ei;
+          const sKey=skillTplDoneKey(key,tpl,ei);
           const isDone=!!(tplDone[sKey]);
           const row=document.createElement('div');
           row.className='dc-task'+(isDone?' done':'');
@@ -238,7 +238,7 @@ function paintCard(card,d){
           const tn=document.createElement('div');tn.className='dc-tn';
           const isMentalTpl = tpl.skillType === 'mental';
           const isNumberedTpl = /^\d+[.)]/.test(ex);
-          const exIcon = isNumberedTpl ? '' : (isMentalTpl ? '🧠 ' : '💪 ');
+          const exIcon = isNumberedTpl ? '' : uiIconSvg(isMentalTpl?'brain':'dumbbell')+' ';
           tn.textContent = exIcon + ex;
           const toggle=()=>{
             tplDone[sKey]=!tplDone[sKey];
@@ -277,7 +277,8 @@ function paintCard(card,d){
         dash.style.cssText='font-size:11px;color:var(--t3);flex-shrink:0;padding:0 3px;line-height:1';
         dash.textContent='—';
         const tn=document.createElement('div');tn.className='dc-tn';
-        tn.textContent=(h.emoji?h.emoji+' ':'')+h.name;
+        tn.innerHTML=habitIconSvg(h.icon,'habit-inline-icon');
+        tn.appendChild(document.createTextNode(h.name));
         tn.style.color='var(--t2)';
         row.id='dc-tpl-hab-'+h.id;
         row.appendChild(dash);row.appendChild(tn);
@@ -290,7 +291,7 @@ function paintCard(card,d){
     const _real=_arr.filter(x=>!x._isHabit);
     const _skItems2=(typeof templatesForDate==='function')?templatesForDate(key):[];
     const _spCnt=_skItems2.reduce((s,t)=>s+t.exercises.length,0);
-    const _skDoneCnt=_skItems2.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[key+'__sport__'+t.id+'__'+ei]).length,0);
+    const _skDoneCnt=_skItems2.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[skillTplDoneKey(key,t,ei)]).length,0);
     const _done=_real.filter(x=>x.done).length+_skDoneCnt;
     const _total=_real.length+_spCnt;
     const _p=pct(_done,_total);
@@ -315,7 +316,7 @@ function wcAddTask(card,key){
   const inp=card.querySelector('#taskinp-'+key);
   if(!inp)return;
   const name=inp.value.trim();if(!name)return;
-  // режим 📌 — постоянная (плавающая) задача текущей недели
+  // Режим постоянной (плавающей) задачи текущей недели
   if(_wcPermMode[key]){
     permanentTasks.push({id:nid++,name,done:false});
     LS.s('permanentTasks',permanentTasks);LS.s('nid',nid);
@@ -376,7 +377,7 @@ function wcRenderTasks(card,key){
       const prow=document.createElement('div');
       prow.className='dc-task perm-task'+(t.done?' done':'');
       prow.id='dc-perm-'+t.id;
-      prow.innerHTML=`<div class="dc-chk">${t.done?'✓':''}</div><div class="dc-tn">📌 ${t.name}</div>`;
+      prow.innerHTML=`<div class="dc-chk">${t.done?'✓':''}</div><div class="dc-tn">${uiIconSvg('pin')} ${t.name}</div>`;
       const del=document.createElement('button');
       del.className='dc-tdel';del.textContent='✕';del.title='Удалить';
       del.addEventListener('click',e=>{e.stopPropagation();wcDelPermanent(t.id);});
@@ -454,11 +455,29 @@ function wcRenderTasks(card,key){
     row.addEventListener('drop',e=>{e.preventDefault();el.querySelectorAll('.dc-task').forEach(r=>r.classList.remove('dc-drag-top','dc-drag-bot'));if(_wcDrag.key!==key)return;const rect=row.getBoundingClientRect();const after=e.clientY>=rect.top+rect.height/2;wcReorderTask(key,_wcDrag.idx,after?i+1:i);_wcDrag.key=null;});
 
     row.innerHTML=`<div class="dc-chk">${t.done?'✓':''}</div><div class="dc-tn">${t.emoji?t.emoji+' ':''}${t.name}</div>${skillLink}`;
+    const moveTopBtn=document.createElement('button');
+    moveTopBtn.type='button';
+    moveTopBtn.className='dc-move-btn';
+    moveTopBtn.textContent='↑';
+    moveTopBtn.title='Переместить в начало списка';
+    moveTopBtn.setAttribute('aria-label','Переместить задачу в начало списка');
+    moveTopBtn.disabled=i===0;
+    moveTopBtn.addEventListener('click',e=>{e.stopPropagation();wcMoveTask(key,i,'top');});
+    const moveBottomBtn=document.createElement('button');
+    moveBottomBtn.type='button';
+    moveBottomBtn.className='dc-move-btn';
+    moveBottomBtn.textContent='↓';
+    moveBottomBtn.title='Переместить в конец списка';
+    moveBottomBtn.setAttribute('aria-label','Переместить задачу в конец списка');
+    moveBottomBtn.disabled=i===tasks[key].length-1;
+    moveBottomBtn.addEventListener('click',e=>{e.stopPropagation();wcMoveTask(key,i,'bottom');});
     const editBtn=document.createElement('button');
     editBtn.className='dc-tdel';editBtn.title='Редактировать';editBtn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
     editBtn.style.cssText='color:var(--t3);font-size:10px';
     editBtn.addEventListener('click',e=>{e.stopPropagation();wcEditTask(key,t.id);});
     row.insertBefore(drag,row.firstChild);
+    row.appendChild(moveTopBtn);
+    row.appendChild(moveBottomBtn);
     if(!isSkill)row.appendChild(editBtn);
 
     const tnEl=row.querySelector('.dc-tn');
@@ -485,12 +504,23 @@ function wcReorderTask(key,fromIdx,toIdx){
   repaintCard(key);
 }
 
+function wcMoveTask(key,fromIdx,destination){
+  const arr=tasks[key]||[];
+  const toIdx=destination==='top'?0:arr.length-1;
+  if(fromIdx<0||fromIdx>=arr.length||fromIdx===toIdx)return;
+  const [moved]=arr.splice(fromIdx,1);
+  arr.splice(toIdx,0,moved);
+  tasks[key]=arr;
+  LS.s('tasks',tasks);
+  repaintCard(key);
+}
+
 function wcUpdateRing(card,key){
   const arr=tasks[key]||[];
   const realArr=arr.filter(x=>!x._isHabit);
   const _skItems=(typeof templatesForDate==='function')?templatesForDate(key):[];
   const _spCnt=_skItems.reduce((s,t)=>s+t.exercises.length,0);
-  const _skDoneCnt=_skItems.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[key+'__sport__'+t.id+'__'+ei]).length,0);
+  const _skDoneCnt=_skItems.reduce((s,t)=>s+t.exercises.filter((_,ei)=>!!tplDone[skillTplDoneKey(key,t,ei)]).length,0);
   const done=realArr.filter(x=>x.done).length+_skDoneCnt;
   const total=realArr.length+_spCnt;
   const p=pct(done,total);
@@ -551,4 +581,3 @@ function wcEditSave(key,id){
 }
 
 // ══ HAB PROPOSE ════════════════════════════════════════
-

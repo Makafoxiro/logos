@@ -346,37 +346,6 @@ function goPage(name,btn){
   curPage=name;
   if(name==='memo'&&pinState==='enter'){memoUnlocked=false;curMemoTab='birthdays';}
   renderCurrent();
-  // Scroll real nav button into center view
-  if(realBtn&&nav){
-    // Тап по клону из бесконечной ленты: кнопка уже под пальцем — не перелистываем
-    // (раньше панель ехала к НАСТОЯЩЕЙ кнопке через весь набор и «крутилась по кругу»)
-    const tappedClone=btn&&btn!==realBtn&&btn.dataset&&btn.dataset.navPage;
-    if(!tappedClone){
-      const navRect=nav.getBoundingClientRect();
-      const btnRect=realBtn.getBoundingClientRect();
-      const navW=nav.offsetWidth;
-      let target=nav.scrollLeft+btnRect.left-navRect.left-navW/2+btnRect.width/2;
-      // Держим цель внутри реального набора кнопок (не в клон-зоне)
-      const sw=nav._setWidth||0;
-      if(sw>0){
-        const minL=sw,maxL=Math.max(minL,2*sw-navW);
-        target=Math.min(Math.max(target,minL),maxL);
-      }
-      target=Math.max(0,target);
-      // Программный smooth-скролл: блокируем телепорт «бесконечности» на время
-      // анимации, иначе прыжок на набор пересекает скролл и лента «зацикливается»
-      if(Math.abs(target-nav.scrollLeft)>2){
-        nav._navLockUntil=Date.now()+1200;
-        if('onscrollend' in nav){
-          // один слушатель на nav: прошлый снимаем, чтобы не копились при серии тапов
-          if(nav._onNavScrollend)nav.removeEventListener('scrollend',nav._onNavScrollend);
-          nav._onNavScrollend=function(){nav._navLockUntil=0;};
-          nav.addEventListener('scrollend',nav._onNavScrollend,{once:true});
-        }
-        nav.scrollTo({left:target,behavior:'smooth'});
-      }
-    }
-  }
 }
 
 // ══ INFINITE NAV SCROLL ═══════════════════════════════
@@ -402,8 +371,7 @@ function goPage(name,btn){
     clone.removeAttribute('id');
     const page=getPage(btn);
     clone.dataset.navPage=page;
-    // Передаём сам клон — goPage увидит data-nav-page и не будет центрировать
-    // навбар (это и вызывало «перелистывание по кругу» при тапе на дальние кнопки)
+    // Mark clones so translations and active state can be synchronized.
     clone.setAttribute('onclick',"goPage('"+page+"',this)");
     return clone;
   }
@@ -425,8 +393,14 @@ function goPage(name,btn){
     const cloneBefore=Array.from(nav.children).slice(0,origBtns.length);
     setWidth=cloneBefore.reduce((s,el)=>s+el.offsetWidth,0);
     if(setWidth===0){requestAnimationFrame(measureAndInit);return;}
-    nav._setWidth=setWidth; // для goPage: зажим цели в реальном наборе
+    nav._setWidth=setWidth;
     nav.scrollLeft=setWidth;
+    const activeBtn=origBtns.find(button=>button.classList.contains('on'));
+    if(activeBtn){
+      const navRect=nav.getBoundingClientRect();
+      const btnRect=activeBtn.getBoundingClientRect();
+      nav.scrollLeft+=btnRect.left-navRect.left-nav.clientWidth/2+btnRect.width/2;
+    }
   }
   requestAnimationFrame(()=>requestAnimationFrame(measureAndInit));
 
@@ -458,8 +432,6 @@ function goPage(name,btn){
       recenterTarget=null;
       if(matched)return;
     }
-    // Программный smooth-скролл (goPage): телепорт посреди анимации «зацикливает» ленту
-    if(nav._navLockUntil&&Date.now()<nav._navLockUntil)return;
     const sl=nav.scrollLeft;
     if(sl<setWidth*0.4){
       recenterTarget=sl+setWidth;

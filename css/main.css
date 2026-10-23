@@ -779,7 +779,7 @@ textarea.field-inp{resize:none;height:65px}
     height:calc(var(--nav) + env(safe-area-inset-bottom));
     padding-bottom:calc(6px + env(safe-area-inset-bottom));
   }
-  .nb{min-width:0;padding:7px 1px 4px;font-size:6px;letter-spacing:0}
+  .nb{flex:0 0 64px;min-width:64px;max-width:64px;padding:7px 1px 4px;font-size:6px;letter-spacing:0}
   .nb svg{width:16px;height:16px}
   .modal{
     max-height:calc(100dvh - max(12px,env(safe-area-inset-top)));

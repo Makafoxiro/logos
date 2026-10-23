@@ -616,6 +616,9 @@ input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .hw-info{flex:1}
 .hw-subj{font-size:13px;font-weight:500}
 .hw-task{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.4}
+.hw-item.is-done .hw-subj,.hw-item.is-done .hw-task{text-decoration:line-through;opacity:.55}
+.hw-done-btn{width:28px;height:28px;flex-shrink:0;border:1px solid var(--bd2);border-radius:50%;background:var(--c2);color:var(--t2);font-size:16px;line-height:1;cursor:pointer}
+.hw-item.is-done .hw-done-btn{border-color:var(--ab);background:var(--a);color:#000;font-weight:700}
 .hw-date{font-family:var(--mono);font-size:10px;color:var(--amber);margin-top:3px}
 .hw-inline{margin-top:4px;width:100%;background:var(--c2);border:1px solid var(--bd);border-radius:8px;padding:6px 9px;font-family:var(--mono);font-size:11px;color:var(--t)}
 .hw-inline:focus{outline:none;border-color:var(--ab)}

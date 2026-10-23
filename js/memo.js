@@ -232,12 +232,13 @@ function renderMemoBody(){
           .sort((a,b)=>(+a.day)-(+b.day)||eduCompareTime(a.time,b.time));
         const hwFor=homework.find(h=>h.pairId&&group.some(g=>g.id===h.pairId)&&h.week===weekKey);
         const sched=group.map(g=>`${DAYS7[g.day].slice(0,2)}${g.time?' '+g.time:''}${g.room?' (ауд. '+g.room+')':''}`).join(' · ');
-        html+=`<div class="hw-item" id="${hwFor?`hw-item-${hwFor.id}`:`hw-auto-${p.id}`}">
+        html+=`<div class="hw-item${hwFor&&hwFor.done?' is-done':''}" id="${hwFor?`hw-item-${hwFor.id}`:`hw-auto-${p.id}`}">
           <div class="hw-info" style="flex:1">
             <div class="hw-subj">${p.name}</div>
             ${sched?`<div class="hw-task">${sched}</div>`:''}
             <input class="hw-inline" placeholder="что задали?" value="${hwFor?String(hwFor.task||'').replace(/"/g,'&quot;'):''}" onchange="savePairHw(${p.id},'${weekKey}',this.value)">
           </div>
+          ${hwFor?hwDoneControl(hwFor):''}
         </div>`;
         if(hwFor&&hwFor.photo)html+=`<div style="margin:-4px 0 10px;padding:0 1px"><img src="${hwFor.photo}" data-hwphoto="${hwFor.id}" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--bd);cursor:pointer;display:block" loading="lazy"></div>`;
       });
@@ -425,8 +426,19 @@ function confirmAddHw(){
   closeHwModal();renderMemoBody();
 }
 function delHw(id) { deleteItem(homework, 'homework', id, renderMemoBody); }
+function hwDoneControl(h){
+  return `<button class="hw-done-btn" type="button" onclick="event.stopPropagation();toggleHomeworkDone(${h.id})" aria-label="${h.done?'вернуть в невыполненные':'отметить выполненным'}">${h.done?'✓':'○'}</button>`;
+}
+function toggleHomeworkDone(id){
+  const h=homework.find(item=>item.id===id);
+  if(!h)return;
+  h.done=!h.done;
+  LS.s('homework',homework);
+  renderMemoBody();
+  if(typeof renderTodayHW==='function')renderTodayHW(new Date());
+}
 function hwItemRow(h){
-  return `<div class="hw-item" id="hw-item-${h.id}"><div class="hw-info"><div class="hw-subj">${h.subj}</div><div class="hw-task">${h.task}</div>${h.date?`<div class="hw-date">${displayDate(h.date)}</div>`:''}</div><div style="display:flex;flex-direction:column;gap:4px"><button class="rt-edit" onclick="openHwEditModal(${h.id})">${_edS}</button></div></div>${h.photo?`<div style="margin:-4px 0 10px;padding:0 1px"><img src="${h.photo}" data-hwphoto="${h.id}" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--bd);cursor:pointer;display:block" loading="lazy"></div>`:''}`;
+  return `<div class="hw-item${h.done?' is-done':''}" id="hw-item-${h.id}"><div class="hw-info"><div class="hw-subj">${h.subj}</div><div class="hw-task">${h.task}</div>${h.date?`<div class="hw-date">${displayDate(h.date)}</div>`:''}</div>${hwDoneControl(h)}<div style="display:flex;flex-direction:column;gap:4px"><button class="rt-edit" onclick="openHwEditModal(${h.id})">${_edS}</button></div></div>${h.photo?`<div style="margin:-4px 0 10px;padding:0 1px"><img src="${h.photo}" data-hwphoto="${h.id}" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--bd);cursor:pointer;display:block" loading="lazy"></div>`:''}`;
 }
 // ── ДЗ, привязанное к паре: предмет берётся из расписания (правится только там) ──
 function hwDateKey(d){

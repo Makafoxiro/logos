@@ -114,7 +114,7 @@ function navToWeekTask(dateKey, taskId){
 }
 
 function taskArrowBtn(dateKey, taskId){
-  return `<button onclick="event.stopPropagation();navToWeekTask('${dateKey}','${taskId}')" style="flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.background='var(--a)';this.style.color='#000'" onmouseleave="this.style.background='var(--c2)';this.style.color='var(--a)'">→</button>`;
+  return `<button type="button" onclick="event.preventDefault();event.stopPropagation();navToWeekTask('${dateKey}','${taskId}')" style="flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.background='var(--a)';this.style.color='#000'" onmouseleave="this.style.background='var(--c2)';this.style.color='var(--a)'">→</button>`;
 }
 
 // ── Кнопка → (общая для всех блоков) ────────────────────
@@ -122,7 +122,7 @@ function arrowBtn(pageKey, elementId, memoTab){
   const args = memoTab
     ? "'" + pageKey + "','" + elementId + "','" + memoTab + "'"
     : "'" + pageKey + "','" + elementId + "'";
-  return "<button onclick=\"event.stopPropagation();todayNavTo(" + args + ")\" style=\"flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s\" onmouseenter=\"this.style.background='var(--a)';this.style.color='#000'\" onmouseleave=\"this.style.background='var(--c2)';this.style.color='var(--a)'\">→</button>";
+  return "<button type=\"button\" onclick=\"event.preventDefault();event.stopPropagation();todayNavTo(" + args + ")\" style=\"flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s\" onmouseenter=\"this.style.background='var(--a)';this.style.color='#000'\" onmouseleave=\"this.style.background='var(--c2)';this.style.color='var(--a)'\">→</button>";
 }
 
 // ── Анимация исчезновения ─────────────────────────────────
@@ -278,7 +278,7 @@ function renderTodayHW(now){
   if(cnt) cnt.textContent='('+hw.length+')';
   // innerHTML ДО _applyGoalCollapse: иначе раскрытие измеряет высоту пустого/старого списка
   list.innerHTML=hw.map(h=>`
-    <div class="today-item" id="today-hw-${h.id}" style="cursor:pointer" onclick="toggleTodayHWDone(${h.id},this)">
+    <div class="today-item" id="today-hw-${h.id}" style="cursor:pointer" onclick="if(!event.target.closest('button'))toggleTodayHWDone(${h.id},this)">
       <div class="chk" style="flex-shrink:0"></div>
       ${uiIconSvg('book')}
       <div style="flex:1;min-width:0">
@@ -296,17 +296,16 @@ function renderTodayHW(now){
 function toggleTodayHWDone(hId, el){
   if(typeof homework==='undefined') return;
   const h=homework.find(x=>x.id==hId);
-  if(!h) return;
+  if(!h||h.done||el.dataset.completing==='true') return;
+  el.dataset.completing='true';
+  h.done=true;
+  if(typeof LS!=='undefined') LS.s('homework',homework);
   el.style.textDecoration='line-through'; el.style.opacity='0.5';
   const chk=el.querySelector('.chk'); if(chk) chk.textContent='✓';
   setTimeout(()=>{
-    todayFadeOut(el, ()=>{
-      h.done=true; // помечаем сделанным, не затирая текст задания
-      if(typeof LS!=='undefined') LS.s('homework',homework);
-      renderTodayHW(new Date());
-      if(typeof curPage!=='undefined'&&curPage==='memo'&&typeof renderMemoBody==='function') renderMemoBody();
-    });
-  }, 1200);
+    todayFadeOut(el,()=>renderTodayHW(new Date()));
+    if(typeof curPage!=='undefined'&&curPage==='memo'&&typeof renderMemoBody==='function')renderMemoBody();
+  },350);
 }
 
 // ── ВИД ШАБЛОНА ДЛЯ ЗАДАЧ СЕГОДНЯ ───────────────────────
@@ -521,7 +520,7 @@ function renderTodayTasks(now){
   });
 
   function taskItem(t, key, showArrow){
-    return `<div class="today-item ${t.done?'done':''}" id="today-task-${t.id}" onclick="toggleTodayTask('${key}','${t.id}')">
+    return `    <div class="today-item ${t.done?'done':''}" id="today-task-${t.id}" onclick="if(!event.target.closest('button'))toggleTodayTask('${key}','${t.id}')">
       <div class="chk">${t.done?'✓':''}</div>
       <div style="font-size:15px">${t.emoji||''}</div>
       <div class="item-name" style="flex:1;min-width:0" onclick="(function(el,e){e.stopPropagation();if(el.scrollWidth>el.clientWidth+1){if(typeof showTaskPopup==='function')showTaskPopup(el.textContent,e);}else{toggleTodayTask('${key}','${t.id}');}})(this,event)">${t.name}</div>
@@ -552,11 +551,11 @@ function renderTodayTasks(now){
     if(_taskSections.permanent){
       html += `<div style="${INNER};display:flex;flex-direction:column;gap:6px;padding-top:8px;padding-bottom:8px">`;
       html += permTasks.map(t => `
-        <div class="today-item perm-task ${t.done?'done':''}" id="today-perm-${t.id}" onclick="wcTogglePermanent('${t.id}')">
+        <div class="today-item perm-task ${t.done?'done':''}" id="today-perm-${t.id}" onclick="if(!event.target.closest('button'))wcTogglePermanent('${t.id}')">
           <div class="chk">${t.done?'✓':''}</div>
           ${uiIconSvg('pin')}
           <div class="item-name" style="flex:1;min-width:0">${t.name}</div>
-          <button onclick="event.stopPropagation();wcDelPermanent('${t.id}')" title="Удалить" style="flex-shrink:0;width:30px;height:30px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--t3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseleave="this.style.color='var(--t3)';this.style.borderColor='var(--bd)'">✕</button>
+          <button type="button" onclick="event.preventDefault();event.stopPropagation();wcDelPermanent('${t.id}')" title="Удалить" style="flex-shrink:0;width:30px;height:30px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--t3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseleave="this.style.color='var(--t3)';this.style.borderColor='var(--bd)'">✕</button>
         </div>`).join('');
       html += '</div>';
     }
@@ -605,8 +604,8 @@ function renderTodayTasks(now){
         const label = displayDate(date,{weekday:true,noYear:true});
         html += `<div style="font-family:var(--mono);font-size:9px;color:var(--red,#ef4444);letter-spacing:1px;text-transform:uppercase;padding:6px 0 4px;opacity:.8">${label}</div>`;
         html += dayTasks.map(t => {
-          const carryBtn = `<button onclick="event.stopPropagation();carryTaskToToday('${key}','${t.id}')" title="Перенести на сегодня" style="flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.background='var(--a)';this.style.color='#000'" onmouseleave="this.style.background='var(--c2)';this.style.color='var(--a)'">↑</button>`;
-          return `<div class="today-item" id="today-undone-${t.id}" onclick="toggleTodayTask('${key}','${t.id}')">
+          const carryBtn = `<button type="button" onclick="event.preventDefault();event.stopPropagation();carryTaskToToday('${key}','${t.id}')" title="Перенести на сегодня" style="flex-shrink:0;width:32px;height:32px;background:var(--c2);border:1px solid var(--bd);border-radius:8px;color:var(--a);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.background='var(--a)';this.style.color='#000'" onmouseleave="this.style.background='var(--c2)';this.style.color='var(--a)'">↑</button>`;
+          return `<div class="today-item" id="today-undone-${t.id}" onclick="if(!event.target.closest('button'))toggleTodayTask('${key}','${t.id}')">
             <div class="chk"></div>
             <div style="font-size:15px">${t.emoji||''}</div>
             <div class="item-name" style="flex:1;min-width:0">${t.name}</div>
@@ -702,7 +701,7 @@ function renderTodayFreeGoals(){
   if(fgCountEl) fgCountEl.textContent='('+active.length+')';
   // innerHTML до _applyGoalCollapse — чтобы раскрытие измеряло актуальную высоту
   list.innerHTML=active.map(g=>`
-    <div class="today-item" id="today-fg-${g.id}" onclick="toggleTodayFreeGoal(${g.id},this)" style="cursor:pointer">
+    <div class="today-item" id="today-fg-${g.id}" onclick="if(!event.target.closest('button'))toggleTodayFreeGoal(${g.id},this)" style="cursor:pointer">
       <div class="chk"></div>
       ${g.photo?`<img src="${g.photo}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0">`:uiIconSvg('target')}
       <div class="item-name">${g.text||''}</div>
@@ -751,7 +750,7 @@ function renderTodayDeadlineGoals(){
     const days=typeof daysToDeadline==='function'?daysToDeadline(g.deadline,now):null;
     const dlColor=days<0?'var(--red)':days===0?'var(--red)':days<=7?'var(--amber)':'var(--a)';
     const dlLabel=days===null?'':days===0?'сегодня!':days<0?`просрочено ${Math.abs(days)}д.`:`${days}д.`;
-    return `<div class="today-item" id="today-dlgoal-${g.id}" onclick="toggleTodayDeadlineGoal(${g.id},this)" style="cursor:pointer">
+    return `<div class="today-item" id="today-dlgoal-${g.id}" onclick="if(!event.target.closest('button'))toggleTodayDeadlineGoal(${g.id},this)" style="cursor:pointer">
       <div class="chk" style="flex-shrink:0"></div>
       ${uiIconSvg('target')}
       <div style="flex:1;min-width:0">
@@ -798,10 +797,10 @@ function renderTodayRoutineSlot(now, slot){
   container.innerHTML=items.map((item,i)=>{
     const realIdx=(routine.daily||[]).indexOf(item);
     const done=!!(log[slot]&&log[slot][item.name]);
-    return `<div class="today-rt-item ${done?'done':''}" id="today-rt-${slot}-${i}" onclick="toggleTodayRoutine('${key}','${slot}',${realIdx},this)">
+    return `<div class="today-rt-item ${done?'done':''}" id="today-rt-${slot}-${i}" onclick="if(!event.target.closest('button'))toggleTodayRoutine('${key}','${slot}',${realIdx},this)">
       <div class="rt-chk">${done?'✓':''}</div>
       <div class="rt-name" style="flex:1">${item.name}</div>
-      <button onclick="event.stopPropagation();navToRoutineSlide('${slot}',${realIdx})" style="${arrowStyle}" ${arrowHover}>→</button>
+      <button type="button" onclick="event.preventDefault();event.stopPropagation();navToRoutineSlide('${slot}',${realIdx})" style="${arrowStyle}" ${arrowHover}>→</button>
     </div>`;
   }).join('');
 }
@@ -840,7 +839,7 @@ function _renderWMY(block, items, logObj, containerId){
   container.innerHTML=items.map((item,i)=>{
     const name=item.name||item;
     const done=!!logObj[name];
-    return `<div class="today-rt-item ${done?'done':''}" id="today-wmy-${block}-${i}" onclick="toggleTodayWeekMonthYear('${block}',${i},this)">
+    return `<div class="today-rt-item ${done?'done':''}" id="today-wmy-${block}-${i}" onclick="if(!event.target.closest('button'))toggleTodayWeekMonthYear('${block}',${i},this)">
       <div class="rt-chk">${done?'✓':''}</div>
       <div class="rt-name" style="flex:1">${name}</div>
       ${arrowBtn('routine','rt-item-'+block+'-'+i)}

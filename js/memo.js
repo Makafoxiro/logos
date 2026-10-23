@@ -231,7 +231,10 @@ function renderMemoBody(){
         const group=eduSchedule.filter(x=>String(x.name||'').trim().toLowerCase()===key)
           .sort((a,b)=>(+a.day)-(+b.day)||eduCompareTime(a.time,b.time));
         const hwFor=homework.find(h=>h.pairId&&group.some(g=>g.id===h.pairId)&&h.week===weekKey);
-        const sched=group.map(g=>`${DAYS7[g.day].slice(0,2)}${g.time?' '+g.time:''}${g.room?' (ауд. '+g.room+')':''}`).join(' · ');
+        const sched=group.map(g=>{
+          const day=DAYS7[Number(g.day)]||'';
+          return `${day.slice(0,2)}${g.time?' '+g.time:''}${g.room?' (ауд. '+g.room+')':''}`;
+        }).filter(Boolean).join(' · ');
         html+=`<div class="hw-item${hwFor&&hwFor.done?' is-done':''}" id="${hwFor?`hw-item-${hwFor.id}`:`hw-auto-${p.id}`}">
           <div class="hw-info" style="flex:1">
             <div class="hw-subj">${p.name}</div>

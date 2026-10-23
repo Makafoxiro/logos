@@ -980,6 +980,7 @@ const _now0=new Date();_cycleCalMonth={y:_now0.getFullYear(),m:_now0.getMonth()}
     }, 350);
   }
   try {
+    if(typeof renderUiIcons==='function')renderUiIcons();
     updateHeader();renderPhysCard();
     goPage('today', document.getElementById('nb-today'));
     updateWeightGhost();

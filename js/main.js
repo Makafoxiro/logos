@@ -358,10 +358,10 @@ function goPage(name,btn){
   if(!nav)return;
   // Only activate on touch devices
   if(!('ontouchstart' in window)&&!navigator.maxTouchPoints)return;
+  if(!window.matchMedia('(max-width: 767px)').matches)return;
 
   const origBtns=Array.from(nav.querySelectorAll('.nb'));
   if(!origBtns.length)return;
-  if(origBtns.reduce((width,button)=>width+button.offsetWidth,0)<=nav.clientWidth)return;
 
   function getPage(btn){
     const m=(btn.getAttribute('onclick')||'').match(/goPage\('(\w+)'/);
@@ -474,8 +474,9 @@ function goPage(name,btn){
 (function fixNavTouchScroll(){
   const nav=document.querySelector('.nav');
   if(!nav)return;
-  let startX=0,startY=0,didScroll=false;
+  let startX=0,startY=0,didScroll=false,resetScrollClickTimer=null;
   nav.addEventListener('touchstart',e=>{
+    clearTimeout(resetScrollClickTimer);
     startX=e.touches[0].clientX;
     startY=e.touches[0].clientY;
     didScroll=false;
@@ -488,9 +489,12 @@ function goPage(name,btn){
   nav.addEventListener('click',e=>{
     if(didScroll){e.stopPropagation();e.preventDefault();didScroll=false;}
   },true);
-  nav.addEventListener('touchend',e=>{
-    if(didScroll)e.preventDefault();
-  },{passive:false});
+  nav.addEventListener('touchend',()=>{
+    if(!didScroll)return;
+    clearTimeout(resetScrollClickTimer);
+    resetScrollClickTimer=setTimeout(()=>{didScroll=false;},500);
+  },{passive:true});
+  nav.addEventListener('touchcancel',()=>{didScroll=false;},{passive:true});
 })();
 
 function renderCurrent(){

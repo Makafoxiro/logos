@@ -778,7 +778,7 @@ function buildAICard(mode) {
     const parLblEn = { num: 'numerator week', den: 'denominator week' };
     if ((eduScheduleA || []).length) {
       for (let d = 0; d < 7; d++) {
-        const dayPairs = eduScheduleA.filter(p => +p.day === d).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+        const dayPairs = eduScheduleA.filter(p => +p.day === d).sort((a, b) => eduCompareTime(a.time, b.time));
         if (!dayPairs.length) continue;
         const dayName = (isEN ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'])[d];
         dayPairs.forEach((p, i) => {
@@ -799,7 +799,7 @@ function buildAICard(mode) {
       const bellDays = isEN ? bellDayEn : bellDayRu;
       li(isEN ? 'Bells schedule:' : 'Звонки:');
       for (let d = 0; d < 7; d++) {
-        const dayBells = eduBellsA.filter(b => +b.day === d).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+        const dayBells = eduBellsA.filter(b => +b.day === d).sort((a, b) => eduCompareTime(a.time, b.time));
         if (!dayBells.length) continue;
         dayBells.forEach((b, i) => li(`${i === 0 ? bellDays[d] + ': ' : '   '}${b.time}${b.name ? ` — ${b.name}` : ''}`));
       }

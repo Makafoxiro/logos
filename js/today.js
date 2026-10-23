@@ -249,7 +249,7 @@ function renderTodaySchedule(now){
   const parity=(typeof eduCurrentParity==='function')?eduCurrentParity():'num';
   const visPairs=eduSchedule.filter(p=>!p.parity||p.parity==='both'||p.parity===parity);
   const tIdx=(now.getDay()+6)%7;
-  const dayPairs=visPairs.filter(p=>+p.day===tIdx).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
+  const dayPairs=visPairs.filter(p=>+p.day===tIdx).sort((a,b)=>eduCompareTime(a.time,b.time));
   if(!dayPairs.length){ block.style.display='none'; return; }
   block.style.display='block';
   if(cnt) cnt.textContent=dayPairs.length+' '+_pluralPairs(dayPairs.length);

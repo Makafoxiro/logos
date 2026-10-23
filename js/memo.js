@@ -110,6 +110,14 @@ function renderMemoTabs(){
 }
 function switchMemoTab(tab){curMemoTab=tab;renderMemoTabs();renderMemoBody();}
 
+function eduTimeMinutes(value){
+  const match=String(value||'').match(/(\d{1,2}):(\d{2})/);
+  if(!match)return Infinity;
+  const hours=Number(match[1]),minutes=Number(match[2]);
+  return hours<24&&minutes<60?hours*60+minutes:Infinity;
+}
+function eduCompareTime(a,b){return eduTimeMinutes(a)-eduTimeMinutes(b);}
+
 let _hwExpand={};
 function toggleHwExpand(id){_hwExpand[id]=!_hwExpand[id];renderMemoBody();}const _edS='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
 function renderMemoBody(){
@@ -178,7 +186,7 @@ function renderMemoBody(){
       html+=`<div class="edu-empty">${eduSchedule.length?'на эту неделю пар нет':'пар нет — добавь первую'}</div>`;
     } else {
       for(let d=0;d<7;d++){
-        const dayPairs=visPairs.filter(p=>+p.day===d).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
+        const dayPairs=visPairs.filter(p=>+p.day===d).sort((a,b)=>eduCompareTime(a.time,b.time));
         if(!dayPairs.length)continue;
         html+=`<div class="edu-day-h">${DAYS7[d]}${d===tIdx?'<span class="edu-today-tag">сегодня</span>':''}</div>`;
         dayPairs.forEach(p=>{html+=eduPairRow(p);});
@@ -221,7 +229,7 @@ function renderMemoBody(){
       uniq.forEach(p=>{
         const key=String(p.name).trim().toLowerCase();
         const group=eduSchedule.filter(x=>String(x.name||'').trim().toLowerCase()===key)
-          .sort((a,b)=>(+a.day)-(+b.day)||String(a.time||'').localeCompare(String(b.time||'')));
+          .sort((a,b)=>(+a.day)-(+b.day)||eduCompareTime(a.time,b.time));
         const hwFor=homework.find(h=>h.pairId&&group.some(g=>g.id===h.pairId)&&h.week===weekKey);
         const sched=group.map(g=>`${DAYS7[g.day].slice(0,2)}${g.time?' '+g.time:''}${g.room?' (ауд. '+g.room+')':''}`).join(' · ');
         html+=`<div class="hw-item" id="${hwFor?`hw-item-${hwFor.id}`:`hw-auto-${p.id}`}">

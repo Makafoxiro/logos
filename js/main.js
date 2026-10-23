@@ -346,6 +346,7 @@ function goPage(name,btn){
   curPage=name;
   if(name==='memo'&&pinState==='enter'){memoUnlocked=false;curMemoTab='birthdays';}
   renderCurrent();
+  if(nav&&typeof nav._centerPage==='function')nav._centerPage(name);
 }
 
 // ══ INFINITE NAV SCROLL ═══════════════════════════════
@@ -360,6 +361,7 @@ function goPage(name,btn){
 
   const origBtns=Array.from(nav.querySelectorAll('.nb'));
   if(!origBtns.length)return;
+  if(origBtns.reduce((width,button)=>width+button.offsetWidth,0)<=nav.clientWidth)return;
 
   function getPage(btn){
     const m=(btn.getAttribute('onclick')||'').match(/goPage\('(\w+)'/);
@@ -387,7 +389,26 @@ function goPage(name,btn){
 
   // Measure one set width and jump to real buttons
   let setWidth=0;
-  let recenterTarget=null;
+  nav._centerPage=function(page){
+    const navRect=nav.getBoundingClientRect();
+    const maxScroll=nav.scrollWidth-nav.clientWidth;
+    const candidates=Array.from(nav.querySelectorAll('.nb')).filter(button=>
+      button.id==='nb-'+page||button.dataset.navPage===page
+    );
+    let target=nav.scrollLeft,bestDistance=Infinity,clampedTarget=nav.scrollLeft,clampedBestDistance=Infinity;
+    candidates.forEach(button=>{
+      const rect=button.getBoundingClientRect();
+      const desired=nav.scrollLeft+rect.left-navRect.left-nav.clientWidth/2+rect.width/2;
+      const candidate=Math.max(0,Math.min(maxScroll,desired));
+      const clampedDistance=Math.abs(candidate-nav.scrollLeft);
+      if(clampedDistance<clampedBestDistance){clampedBestDistance=clampedDistance;clampedTarget=candidate;}
+      if(desired<0||desired>maxScroll)return;
+      const distance=Math.abs(candidate-nav.scrollLeft);
+      if(distance<bestDistance){bestDistance=distance;target=candidate;}
+    });
+    if(bestDistance===Infinity){target=clampedTarget;bestDistance=clampedBestDistance;}
+    if(bestDistance>1)nav.scrollTo({left:target,behavior:'smooth'});
+  };
 
   function measureAndInit(){
     const cloneBefore=Array.from(nav.children).slice(0,origBtns.length);
@@ -396,11 +417,7 @@ function goPage(name,btn){
     nav._setWidth=setWidth;
     nav.scrollLeft=setWidth;
     const activeBtn=origBtns.find(button=>button.classList.contains('on'));
-    if(activeBtn){
-      const navRect=nav.getBoundingClientRect();
-      const btnRect=activeBtn.getBoundingClientRect();
-      nav.scrollLeft+=btnRect.left-navRect.left-nav.clientWidth/2+btnRect.width/2;
-    }
+    if(activeBtn)nav._centerPage(getPage(activeBtn));
   }
   requestAnimationFrame(()=>requestAnimationFrame(measureAndInit));
 
@@ -424,23 +441,33 @@ function goPage(name,btn){
   let _remeasureT=null;
   window.addEventListener('resize',()=>{clearTimeout(_remeasureT);_remeasureT=setTimeout(remeasure,150);});
 
-  nav.addEventListener('scroll',()=>{
-    if(document.documentElement.classList.contains('modal-open'))return;
-    if(setWidth===0)return;
-    if(recenterTarget!==null){
-      const matched=Math.abs(nav.scrollLeft-recenterTarget)<1;
-      recenterTarget=null;
-      if(matched)return;
-    }
-    const sl=nav.scrollLeft;
-    if(sl<setWidth*0.4){
-      recenterTarget=sl+setWidth;
-      nav.scrollLeft=recenterTarget;
-    } else if(sl>setWidth*1.6){
-      recenterTarget=sl-setWidth;
-      nav.scrollLeft=recenterTarget;
+  let scrollEndTimer=null,navTouching=false;
+  nav.addEventListener('touchstart',()=>{
+    navTouching=true;
+    clearTimeout(scrollEndTimer);
+  },{passive:true});
+  nav.addEventListener('touchend',()=>{
+    navTouching=false;
+    if(!('onscrollend' in nav)){
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer=setTimeout(recenterAfterScroll,180);
     }
   },{passive:true});
+  nav.addEventListener('touchcancel',()=>{navTouching=false;},{passive:true});
+  function recenterAfterScroll(){
+    if(document.documentElement.classList.contains('modal-open'))return;
+    if(setWidth===0)return;
+    const sl=nav.scrollLeft;
+    if(sl<setWidth)nav.scrollLeft=sl+setWidth;
+    else if(sl>setWidth*2)nav.scrollLeft=sl-setWidth;
+  }
+  nav.addEventListener('scroll',()=>{
+    if(!('onscrollend' in nav)&&!navTouching){
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer=setTimeout(recenterAfterScroll,160);
+    }
+  },{passive:true});
+  if('onscrollend' in nav)nav.addEventListener('scrollend',recenterAfterScroll);
 })();
 
 // ══ NAV SCROLL FIX: tap vs scroll on mobile ═══════════

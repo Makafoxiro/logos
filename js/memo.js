@@ -430,7 +430,7 @@ function confirmAddHw(){
 }
 function delHw(id) { deleteItem(homework, 'homework', id, renderMemoBody); }
 function hwDoneControl(h){
-  return `<button class="hw-done-btn" type="button" onclick="event.stopPropagation();toggleHomeworkDone(${h.id})" aria-label="${h.done?'вернуть в невыполненные':'отметить выполненным'}">${h.done?'✓':'○'}</button>`;
+  return `<button class="hw-done-btn${h.done?' is-done':''}" type="button" onclick="event.stopPropagation();toggleHomeworkDone(${h.id})" aria-label="${h.done?'вернуть в невыполненные':'отметить выполненным'}">${h.done?'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 8.2 3 3 6-6.4"/></svg>':''}</button>`;
 }
 function toggleHomeworkDone(id){
   const h=homework.find(item=>item.id===id);

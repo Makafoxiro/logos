@@ -352,10 +352,10 @@ function goPage(name,btn){
     // (раньше панель ехала к НАСТОЯЩЕЙ кнопке через весь набор и «крутилась по кругу»)
     const tappedClone=btn&&btn!==realBtn&&btn.dataset&&btn.dataset.navPage;
     if(!tappedClone){
-      const btnLeft=realBtn.offsetLeft;
-      const btnW=realBtn.offsetWidth;
+      const navRect=nav.getBoundingClientRect();
+      const btnRect=realBtn.getBoundingClientRect();
       const navW=nav.offsetWidth;
-      let target=btnLeft-navW/2+btnW/2;
+      let target=nav.scrollLeft+btnRect.left-navRect.left-navW/2+btnRect.width/2;
       // Держим цель внутри реального набора кнопок (не в клон-зоне)
       const sw=nav._setWidth||0;
       if(sw>0){
@@ -419,7 +419,7 @@ function goPage(name,btn){
 
   // Measure one set width and jump to real buttons
   let setWidth=0;
-  let jumping=false;
+  let recenterTarget=null;
 
   function measureAndInit(){
     const cloneBefore=Array.from(nav.children).slice(0,origBtns.length);
@@ -452,18 +452,21 @@ function goPage(name,btn){
 
   nav.addEventListener('scroll',()=>{
     if(document.documentElement.classList.contains('modal-open'))return;
-    if(jumping||setWidth===0)return;
+    if(setWidth===0)return;
+    if(recenterTarget!==null){
+      const matched=Math.abs(nav.scrollLeft-recenterTarget)<1;
+      recenterTarget=null;
+      if(matched)return;
+    }
     // Программный smooth-скролл (goPage): телепорт посреди анимации «зацикливает» ленту
     if(nav._navLockUntil&&Date.now()<nav._navLockUntil)return;
     const sl=nav.scrollLeft;
     if(sl<setWidth*0.4){
-      jumping=true;
-      nav.scrollLeft=sl+setWidth;
-      requestAnimationFrame(()=>{jumping=false;});
+      recenterTarget=sl+setWidth;
+      nav.scrollLeft=recenterTarget;
     } else if(sl>setWidth*1.6){
-      jumping=true;
-      nav.scrollLeft=sl-setWidth;
-      requestAnimationFrame(()=>{jumping=false;});
+      recenterTarget=sl-setWidth;
+      nav.scrollLeft=recenterTarget;
     }
   },{passive:true});
 })();

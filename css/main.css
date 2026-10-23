@@ -180,6 +180,8 @@ input,button,textarea,select,option{font-family:var(--sans)}
   flex-shrink:0;
   overflow-x:auto;
   scrollbar-width:none;
+  touch-action:pan-x;
+  overscroll-behavior-x:contain;
   box-shadow:0 -4px 24px rgba(0,0,0,0.35);
 }
 .nav::-webkit-scrollbar{display:none}
